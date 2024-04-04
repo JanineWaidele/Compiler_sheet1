@@ -149,6 +149,3 @@ def tyOfExp(e: Optional[resultTy]) -> ty:
             return Int()
         case None:
             return Int()
-    
-
-
