@@ -24,21 +24,11 @@ def stmtToWasm(s: stmt) -> list[WasmInstr]:
         # if condition
         # then do smth
         # else do other
-
-            # t: ty = tyOfExp(cond.ty)
-            # tw: WasmValtype = 'i64'
-            # match t:
-            #     case Int():
-            #         tw = 'i64'
-            #     case Bool():
-            #         tw = 'i32'
-            print("hey")
-            print(cond)
             return expToWasm(cond) + [WasmInstrIf(None, compileStmts(thn), compileStmts(els))]
         
         case WhileStmt(cond, bod):
         # Stack:
-            return [WasmInstrLoop(WasmId('$id'), compileStmts(bod))]+expToWasm(cond)
+            return expToWasm(cond) + [WasmInstrIf(None, [WasmInstrLoop(WasmId('$whileLoop'), compileStmts(bod)+ expToWasm(cond) + [WasmInstrBranch(WasmId('$whileLoop'), True)])], [])]
         
 # turning an expression into a list of Wasm instructions
 def expToWasm(expr: exp) -> list[WasmInstr]:
@@ -70,7 +60,7 @@ def expToWasm(expr: exp) -> list[WasmInstr]:
                 case 'print':
                     p = '$print_'+f
                 case 'input_int':
-                    p = '$input_'+f  # TODO: here also i32 or i64?
+                    p = '$input_'+f 
                 case _:
                     pass
             return utils.flatten([expToWasm(e) for e in args])+[WasmInstrCall(WasmId(p))]
@@ -94,10 +84,9 @@ def expToWasm(expr: exp) -> list[WasmInstr]:
                 case Mul():
                     return expToWasm(l)+expToWasm(r)+[WasmInstrNumBinOp('i64', 'mul')] 
                 case And():
-                    return expToWasm(l)+expToWasm(r)+[WasmInstrNumBinOp('i64', 'and')]
+                    return expToWasm(l) + [WasmInstrIf("i32", expToWasm(r), [WasmInstrConst('i32', 0)])]
                 case Or(): 
-                    return expToWasm(l)+expToWasm(r)+[WasmInstrNumBinOp('i64', 'xor')]
-                # TODO: are all of the relops strings correct?
+                    return expToWasm(l) + [WasmInstrIf("i32", [WasmInstrConst('i32', 1)], expToWasm(r))]
                 case Less():
                     return expToWasm(l)+expToWasm(r)+[WasmInstrIntRelOp('i64', 'lt_s')] 
                 case LessEq():
@@ -105,11 +94,19 @@ def expToWasm(expr: exp) -> list[WasmInstr]:
                 case Greater():
                     return expToWasm(l)+expToWasm(r)+[WasmInstrIntRelOp('i64', 'gt_s')]
                 case GreaterEq():
-                    return expToWasm(l)+expToWasm(r)+[WasmInstrIntRelOp('i64', 'ge_u')]
+                    return expToWasm(l)+expToWasm(r)+[WasmInstrIntRelOp('i64', 'ge_s')]
                 case Eq():
-                    return expToWasm(l)+expToWasm(r)+[WasmInstrIntRelOp('i32', 'eq')]
+                    match tyOfExp(l.ty):
+                        case Int():
+                            return expToWasm(l)+expToWasm(r)+[WasmInstrIntRelOp('i64', 'eq')]
+                        case Bool():
+                            return expToWasm(l)+expToWasm(r)+[WasmInstrIntRelOp('i32', 'eq')]
                 case NotEq():
-                    return expToWasm(l)+expToWasm(r)+[WasmInstrIntRelOp('i32', 'ne')]
+                    match tyOfExp(l.ty):
+                        case Int():
+                            return expToWasm(l)+expToWasm(r)+[WasmInstrIntRelOp('i64', 'ne')]
+                        case Bool():
+                            return expToWasm(l)+expToWasm(r)+[WasmInstrIntRelOp('i32', 'ne')]
         
 
 
@@ -124,7 +121,6 @@ def compileModule(m: mod, cfg: CompilerConfig) -> WasmModule:
     wasm_exports = [WasmExport('main', WasmExportFunc(WasmId('$main')))]
     locals:List[tuple[WasmId, WasmValtype]] = [(WasmId('$'+x[0].name), mapTyToWasmValType(x[1].ty)) for x in loc_vars]
     funcs =[WasmFunc(WasmId('$main'), [], None, locals, compileStmts(m.stmts))]
-    print(funcs)
     return WasmModule(wasm_imports, wasm_exports, globals=[], data=[], funcTable=WasmFuncTable([(WasmId('$main'))]), funcs=funcs)
 
 def mapTyToWasmValType(t: ty)->WasmValtype:
