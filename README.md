@@ -98,14 +98,12 @@ Adding new tests is simple:
 
 See below for a list of requirements.
 You can either install the requirements on your local system (alternative 2) or
-you can use a prebuilt docker image (alternative 1).
-Installation via docker is simpler that a local installation. Especially under
-Windows, using docker is the
-preferred way to get everything running.
+you can use a prebuilt docker image (alternative 1). Using docker seems to be the
+preferred way to get everything running under Windows.
 
 ## Requirements
 
-* Python version 3.12.x (a later version should also work, 3.11 or earlier does **not** work)
+* Python version 3.12.x (3.11 does not work)
 * iwasm virtual from the [wasm-micro-runtime](https://github.com/bytecodealliance/wasm-micro-runtime) package,
   a virtual machine for Wasm.
 * [wabt](https://github.com/webassembly/wabt), which contains the `wat2wasm` tool for converting
@@ -114,9 +112,9 @@ preferred way to get everything running.
 * cmake, to build the native extension functions for wasm-micro-runtime.
 * nodejs and npm
 * bash
-* timeout command.
 * [SPIM](https://spimsimulator.sourceforge.net/), a MIPS32 simulator.
 * Optional, for visualizing graph trees: graphviz
+* Supported platforms: Mac OSX and Linux. Windows should work as well, but I did not test. I recommand using docker if you are running Windows.
 
 ## Alternative 1: Use docker
 
@@ -126,25 +124,13 @@ is done inside a prebuilt docker image.
 
 You need to perform the following steps:
 
-* Install docker (Under Windows, use docker under WSL. See below)
+* Install docker
 * Start a shell using the provided docker image
   (you have to be in the toplevel directory of this project):
 
 ```
 $ docker run -v .:/cc -ti skogsbaer/compiler-construction-wasm_linux-amd64:latest bash
 ```
-
-In some cases, you might need to specify the current directory not via `.`
-but as an absolute path. In this case, the command is:
-
-```
-$ docker run -v /PATH_TO_YOUR_CHECKOUT_OF_THIS_REPO:/cc -ti skogsbaer/compiler-construction-wasm_linux-amd64:latest bash
-```
-
-(Replace
-`/PATH_TO_YOUR_CHECKOUT_OF_THIS_REPO` with the absolute path to the clone
-of this repository):
-
 
 Inside the shell, you can now run all tests (`scripts/run-tests`) or type check your code
 (`scripts/tycheck`).
@@ -162,37 +148,6 @@ with `wasm-support/native-lib/env.c` (for native code used by wasm). The script
 `docker/check-image-uptodate` can be used to check if everything is in sync.
 Please contact the maintainer of this repository if a new docker image is needed.
 
-### Tips for Windows user
-
-On Windows, you might run into line ending problems. For example, if you
-perform a git checkout in Windows, line endings are transformed into
-`\r\n`, but the commands inside the docker container expects unix-style
-line endings `\n`. Also, there are sometimes problems with Docker Desktop
-on Windows.
-
-To solve these problems, follow these steps:
-
-* Install the Windows Subsystem for Linux (WSL).
-* Install docker inside the WSL and use docker inside WSL. Do not use Docker Desktop.
-* Install git under WSL and always use git under WSL.
-
-The only downside of this approach is that you cannot use the git tools
-provide by Visual Studio code, you always have to use the commandline
-under WSL.
-
-### Using Visual Studio Code with Docker
-
-To make proper use of the Python extension for Visual Studio Code, you need to install
-the python toolchain also outside of docker.
-First, make sure you have Python 3.12 (a later version should also work). Then execute
-the following commands from the toplevel directory of this project:
-
-```
-$ python -m venv .venv
-$ source .venv/bin/activate
-$ pip install -r requirements.txt
-```
-
 ## Alternative 2: Install everything by hand
 
 The following installation instruction should work under Mac OSX and Linux. Make sure
@@ -200,8 +155,7 @@ you install all tools mentioned in the list above. Below, you find more detailed
 for some but not all required tools.
 
 I did not test under Windows, feel free to create a pull request to
-add instructions for Windows. However, I recommend using the installation
-via docker under Windows.
+add instructions for Windows.
 
 ### Install `wasm-micro-runtime` and `wabt`
 
@@ -218,55 +172,30 @@ or the [official installation instructions](https://github.com/bytecodealliance/
 
 ### Install the python toolchain:
 
-First, make sure you have Python 3.12 (a later version should also work).
-Then execute from the toplevel directory of this project:
-
 ```
 $ python -m venv .venv
 $ source .venv/bin/activate
 $ pip install -r requirements.txt
 ```
 
-### Build native extension functions for iwasm
+### Build native exension functions for iwasm
 
 The compiler relies on some Wasm extension functions to provide input/output functionality.
-Here is how to build the native extension functions for the
-[iwasm](https://github.com/bytecodealliance/wasm-micro-runtime) virtual
-machine.
-To build the native functions, you must checkout the
-[wasm-micro-runtime](https://github.com/bytecodealliance/wasm-micro-runtime)
-repositoy via git, even if installed it previously in some other way.
-After cloning the wasm-micro-runtime repository, switch to the branch that
-corresponds to the version of iwasm that you installed previously.
-
-1. Get the version of iwasm with `iwasm --version`. Suppose the version is
-   1.3.2.
-2. In the clone of the wasm-micro-runtime repository, switch to the right
-   branch with `git checkout WAMR-1.3.2`.
-
-After setting up the clone of wasm-micro-runtime this way, execute the
-following commands to build the native functions.
-Here, `PATH_TO_WARM_CHECKOUT` must point to the directory with the clone of
-wasm-micro-runtime.
+Here is how to build the native extension functions for the [iwasm](https://github.com/bytecodealliance/wasm-micro-runtime) virtual machine. `WAMR_ROOT_DIR` must point to a checkout of
+[wasm-micro-runtime](https://github.com/bytecodealliance/wasm-micro-runtime).
 
 ```
 $ cd wasm-support
-$ make native WAMR_ROOT_DIR=/PATH_TO_WARM_CHECKOUT/wasm-micro-runtime
+$ make native WAMR_ROOT_DIR=/PATH_TO_CHECKOUT/wasm-micro-runtime
 ```
 
 ## Install pyright
 
-You need to install nodejs and npm first. Then, from the toplevel
-directory of this project, execute:
+You need to install nodejs and npm first. Then execute
 
 ```
 $ npm install
 ```
-
-## Misc
-
-The tests of this project rely on the `timeout` command. Under Mac,
-this is available via `brew install coreutils`.
 
 
 ### Verifying your installation

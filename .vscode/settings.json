@@ -2,6 +2,9 @@
     "python.analysis.typeCheckingMode": "strict",
     "cmake.configureOnOpen": false,
     "python.autoComplete.extraPaths": [
+        "c:\\Users\\Janine Waidele\\.vscode\\extensions\\stefanwehr.write-your-python-program-1.0.6\\python\\src\\"
+    ],
+    "python.analysis.extraPaths": [
         "/Users/swehr/.vscode/extensions/stefanwehr.write-your-python-program-1.0.6/python/src/"
     ]
 }
