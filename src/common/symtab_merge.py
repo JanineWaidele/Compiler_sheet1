@@ -1,9 +1,7 @@
 from common.symtab import Symtab, VarInfo
 from common.compilerSupport import CompileError
 
-def isDefinitelyAssigned[K, T](x: K, main: Symtab[K, T], nested: list[Symtab[K, T]]) -> bool:
-    if main.hasVar(x) and main.unsafeInfo(x).definitelyAssigned:
-        return True
+def isDefinitelyAssigned[K, T](x: K, nested: list[Symtab[K, T]]) -> bool:
     for st in nested:
         if not st.hasVar(x):
             return False
@@ -11,8 +9,8 @@ def isDefinitelyAssigned[K, T](x: K, main: Symtab[K, T], nested: list[Symtab[K, 
             return False
     return True
 
-def merge[K, T](main: Symtab[K, T], st1: Symtab[K, T], st2: Symtab[K, T]) -> dict[K, VarInfo[T]]:
-    envs = [main, st1, st2]
+def merge[K, T](st1: Symtab[K, T], st2: Symtab[K, T]) -> dict[K, VarInfo[T]]:
+    envs = [st1, st2]
     union: dict[K, list[VarInfo[T]]] = {}
     for st in envs:
         for k, v in st.items():
@@ -30,5 +28,5 @@ def merge[K, T](main: Symtab[K, T], st1: Symtab[K, T], st2: Symtab[K, T]) -> dic
                 raise CompileError.typeError(f'Inconsistent types for variable {x}')
             if v.scope != first.scope:
                 raise CompileError.typeError(f'Inconsistent scope for variable {x}')
-        res[x] = VarInfo(first.ty, isDefinitelyAssigned(x, main, [st1, st2]), first.scope)
+        res[x] = VarInfo(first.ty, isDefinitelyAssigned(x, [st1, st2]), first.scope)
     return res

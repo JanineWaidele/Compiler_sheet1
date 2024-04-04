@@ -1,0 +1,295 @@
+<?xml version="1.0" encoding="utf-8"?>
+<django-objects version="1.0">
+  <object model="attestation.ratingscale" pk="1">
+    <field name="name" type="CharField">Points</field>
+  </object>
+  <object model="attestation.ratingscaleitem" pk="1">
+    <field name="scale" rel="ManyToOneRel" to="attestation.ratingscale">1</field>
+    <field name="name" type="CharField">0.0</field>
+    <field name="position" type="PositiveSmallIntegerField">0</field>
+  </object>
+  <object model="attestation.ratingscaleitem" pk="2">
+    <field name="scale" rel="ManyToOneRel" to="attestation.ratingscale">1</field>
+    <field name="name" type="CharField">1.0</field>
+    <field name="position" type="PositiveSmallIntegerField">1</field>
+  </object>
+  <object model="attestation.ratingscaleitem" pk="3">
+    <field name="scale" rel="ManyToOneRel" to="attestation.ratingscale">1</field>
+    <field name="name" type="CharField">2.0</field>
+    <field name="position" type="PositiveSmallIntegerField">2</field>
+  </object>
+  <object model="attestation.ratingscaleitem" pk="4">
+    <field name="scale" rel="ManyToOneRel" to="attestation.ratingscale">1</field>
+    <field name="name" type="CharField">3.0</field>
+    <field name="position" type="PositiveSmallIntegerField">3</field>
+  </object>
+  <object model="attestation.ratingscaleitem" pk="5">
+    <field name="scale" rel="ManyToOneRel" to="attestation.ratingscale">1</field>
+    <field name="name" type="CharField">4.0</field>
+    <field name="position" type="PositiveSmallIntegerField">4</field>
+  </object>
+  <object model="attestation.ratingscaleitem" pk="6">
+    <field name="scale" rel="ManyToOneRel" to="attestation.ratingscale">1</field>
+    <field name="name" type="CharField">5.0</field>
+    <field name="position" type="PositiveSmallIntegerField">5</field>
+  </object>
+  <object model="attestation.ratingscaleitem" pk="7">
+    <field name="scale" rel="ManyToOneRel" to="attestation.ratingscale">1</field>
+    <field name="name" type="CharField">6.0</field>
+    <field name="position" type="PositiveSmallIntegerField">6</field>
+  </object>
+  <object model="attestation.ratingscaleitem" pk="8">
+    <field name="scale" rel="ManyToOneRel" to="attestation.ratingscale">1</field>
+    <field name="name" type="CharField">7.0</field>
+    <field name="position" type="PositiveSmallIntegerField">7</field>
+  </object>
+  <object model="attestation.ratingscaleitem" pk="9">
+    <field name="scale" rel="ManyToOneRel" to="attestation.ratingscale">1</field>
+    <field name="name" type="CharField">8.0</field>
+    <field name="position" type="PositiveSmallIntegerField">8</field>
+  </object>
+  <object model="attestation.ratingscaleitem" pk="10">
+    <field name="scale" rel="ManyToOneRel" to="attestation.ratingscale">1</field>
+    <field name="name" type="CharField">9.0</field>
+    <field name="position" type="PositiveSmallIntegerField">9</field>
+  </object>
+  <object model="attestation.ratingscaleitem" pk="11">
+    <field name="scale" rel="ManyToOneRel" to="attestation.ratingscale">1</field>
+    <field name="name" type="CharField">10.0</field>
+    <field name="position" type="PositiveSmallIntegerField">10</field>
+  </object>
+  <object model="attestation.ratingscaleitem" pk="12">
+    <field name="scale" rel="ManyToOneRel" to="attestation.ratingscale">1</field>
+    <field name="name" type="CharField">11.0</field>
+    <field name="position" type="PositiveSmallIntegerField">11</field>
+  </object>
+  <object model="attestation.ratingscaleitem" pk="13">
+    <field name="scale" rel="ManyToOneRel" to="attestation.ratingscale">1</field>
+    <field name="name" type="CharField">12.0</field>
+    <field name="position" type="PositiveSmallIntegerField">12</field>
+  </object>
+  <object model="attestation.ratingscaleitem" pk="14">
+    <field name="scale" rel="ManyToOneRel" to="attestation.ratingscale">1</field>
+    <field name="name" type="CharField">13.0</field>
+    <field name="position" type="PositiveSmallIntegerField">13</field>
+  </object>
+  <object model="attestation.ratingscaleitem" pk="15">
+    <field name="scale" rel="ManyToOneRel" to="attestation.ratingscale">1</field>
+    <field name="name" type="CharField">14.0</field>
+    <field name="position" type="PositiveSmallIntegerField">14</field>
+  </object>
+  <object model="attestation.ratingscaleitem" pk="16">
+    <field name="scale" rel="ManyToOneRel" to="attestation.ratingscale">1</field>
+    <field name="name" type="CharField">15.0</field>
+    <field name="position" type="PositiveSmallIntegerField">15</field>
+  </object>
+  <object model="attestation.ratingscaleitem" pk="17">
+    <field name="scale" rel="ManyToOneRel" to="attestation.ratingscale">1</field>
+    <field name="name" type="CharField">16.0</field>
+    <field name="position" type="PositiveSmallIntegerField">16</field>
+  </object>
+  <object model="attestation.ratingscaleitem" pk="18">
+    <field name="scale" rel="ManyToOneRel" to="attestation.ratingscale">1</field>
+    <field name="name" type="CharField">17.0</field>
+    <field name="position" type="PositiveSmallIntegerField">17</field>
+  </object>
+  <object model="attestation.ratingscaleitem" pk="19">
+    <field name="scale" rel="ManyToOneRel" to="attestation.ratingscale">1</field>
+    <field name="name" type="CharField">18.0</field>
+    <field name="position" type="PositiveSmallIntegerField">18</field>
+  </object>
+  <object model="attestation.ratingscaleitem" pk="20">
+    <field name="scale" rel="ManyToOneRel" to="attestation.ratingscale">1</field>
+    <field name="name" type="CharField">19.0</field>
+    <field name="position" type="PositiveSmallIntegerField">19</field>
+  </object>
+  <object model="attestation.ratingscaleitem" pk="21">
+    <field name="scale" rel="ManyToOneRel" to="attestation.ratingscale">1</field>
+    <field name="name" type="CharField">20.0</field>
+    <field name="position" type="PositiveSmallIntegerField">20</field>
+  </object>
+  <object model="attestation.ratingscaleitem" pk="22">
+    <field name="scale" rel="ManyToOneRel" to="attestation.ratingscale">1</field>
+    <field name="name" type="CharField">21.0</field>
+    <field name="position" type="PositiveSmallIntegerField">21</field>
+  </object>
+  <object model="attestation.ratingscaleitem" pk="23">
+    <field name="scale" rel="ManyToOneRel" to="attestation.ratingscale">1</field>
+    <field name="name" type="CharField">22.0</field>
+    <field name="position" type="PositiveSmallIntegerField">22</field>
+  </object>
+  <object model="attestation.ratingscaleitem" pk="24">
+    <field name="scale" rel="ManyToOneRel" to="attestation.ratingscale">1</field>
+    <field name="name" type="CharField">23.0</field>
+    <field name="position" type="PositiveSmallIntegerField">23</field>
+  </object>
+  <object model="attestation.ratingscaleitem" pk="25">
+    <field name="scale" rel="ManyToOneRel" to="attestation.ratingscale">1</field>
+    <field name="name" type="CharField">24.0</field>
+    <field name="position" type="PositiveSmallIntegerField">24</field>
+  </object>
+  <object model="attestation.ratingscaleitem" pk="26">
+    <field name="scale" rel="ManyToOneRel" to="attestation.ratingscale">1</field>
+    <field name="name" type="CharField">25.0</field>
+    <field name="position" type="PositiveSmallIntegerField">25</field>
+  </object>
+  <object model="attestation.ratingscaleitem" pk="27">
+    <field name="scale" rel="ManyToOneRel" to="attestation.ratingscale">1</field>
+    <field name="name" type="CharField">26.0</field>
+    <field name="position" type="PositiveSmallIntegerField">26</field>
+  </object>
+  <object model="attestation.ratingscaleitem" pk="28">
+    <field name="scale" rel="ManyToOneRel" to="attestation.ratingscale">1</field>
+    <field name="name" type="CharField">27.0</field>
+    <field name="position" type="PositiveSmallIntegerField">27</field>
+  </object>
+  <object model="attestation.ratingscaleitem" pk="29">
+    <field name="scale" rel="ManyToOneRel" to="attestation.ratingscale">1</field>
+    <field name="name" type="CharField">28.0</field>
+    <field name="position" type="PositiveSmallIntegerField">28</field>
+  </object>
+  <object model="attestation.ratingscaleitem" pk="30">
+    <field name="scale" rel="ManyToOneRel" to="attestation.ratingscale">1</field>
+    <field name="name" type="CharField">29.0</field>
+    <field name="position" type="PositiveSmallIntegerField">29</field>
+  </object>
+  <object model="attestation.ratingscaleitem" pk="31">
+    <field name="scale" rel="ManyToOneRel" to="attestation.ratingscale">1</field>
+    <field name="name" type="CharField">30.0</field>
+    <field name="position" type="PositiveSmallIntegerField">30</field>
+  </object>
+  <object model="attestation.ratingscaleitem" pk="32">
+    <field name="scale" rel="ManyToOneRel" to="attestation.ratingscale">1</field>
+    <field name="name" type="CharField">31.0</field>
+    <field name="position" type="PositiveSmallIntegerField">31</field>
+  </object>
+  <object model="attestation.ratingscaleitem" pk="33">
+    <field name="scale" rel="ManyToOneRel" to="attestation.ratingscale">1</field>
+    <field name="name" type="CharField">32.0</field>
+    <field name="position" type="PositiveSmallIntegerField">32</field>
+  </object>
+  <object model="attestation.ratingscaleitem" pk="34">
+    <field name="scale" rel="ManyToOneRel" to="attestation.ratingscale">1</field>
+    <field name="name" type="CharField">33.0</field>
+    <field name="position" type="PositiveSmallIntegerField">33</field>
+  </object>
+  <object model="attestation.ratingscaleitem" pk="35">
+    <field name="scale" rel="ManyToOneRel" to="attestation.ratingscale">1</field>
+    <field name="name" type="CharField">34.0</field>
+    <field name="position" type="PositiveSmallIntegerField">34</field>
+  </object>
+  <object model="attestation.ratingscaleitem" pk="36">
+    <field name="scale" rel="ManyToOneRel" to="attestation.ratingscale">1</field>
+    <field name="name" type="CharField">35.0</field>
+    <field name="position" type="PositiveSmallIntegerField">35</field>
+  </object>
+  <object model="attestation.ratingscaleitem" pk="37">
+    <field name="scale" rel="ManyToOneRel" to="attestation.ratingscale">1</field>
+    <field name="name" type="CharField">36.0</field>
+    <field name="position" type="PositiveSmallIntegerField">36</field>
+  </object>
+  <object model="attestation.ratingscaleitem" pk="38">
+    <field name="scale" rel="ManyToOneRel" to="attestation.ratingscale">1</field>
+    <field name="name" type="CharField">37.0</field>
+    <field name="position" type="PositiveSmallIntegerField">37</field>
+  </object>
+  <object model="attestation.ratingscaleitem" pk="39">
+    <field name="scale" rel="ManyToOneRel" to="attestation.ratingscale">1</field>
+    <field name="name" type="CharField">38.0</field>
+    <field name="position" type="PositiveSmallIntegerField">38</field>
+  </object>
+  <object model="attestation.ratingscaleitem" pk="40">
+    <field name="scale" rel="ManyToOneRel" to="attestation.ratingscale">1</field>
+    <field name="name" type="CharField">39.0</field>
+    <field name="position" type="PositiveSmallIntegerField">39</field>
+  </object>
+  <object model="attestation.ratingscaleitem" pk="41">
+    <field name="scale" rel="ManyToOneRel" to="attestation.ratingscale">1</field>
+    <field name="name" type="CharField">40.0</field>
+    <field name="position" type="PositiveSmallIntegerField">40</field>
+  </object>
+  <object model="attestation.ratingscaleitem" pk="42">
+    <field name="scale" rel="ManyToOneRel" to="attestation.ratingscale">1</field>
+    <field name="name" type="CharField">41.0</field>
+    <field name="position" type="PositiveSmallIntegerField">41</field>
+  </object>
+  <object model="attestation.ratingscaleitem" pk="43">
+    <field name="scale" rel="ManyToOneRel" to="attestation.ratingscale">1</field>
+    <field name="name" type="CharField">42.0</field>
+    <field name="position" type="PositiveSmallIntegerField">42</field>
+  </object>
+  <object model="attestation.ratingscaleitem" pk="44">
+    <field name="scale" rel="ManyToOneRel" to="attestation.ratingscale">1</field>
+    <field name="name" type="CharField">43.0</field>
+    <field name="position" type="PositiveSmallIntegerField">43</field>
+  </object>
+  <object model="attestation.ratingscaleitem" pk="45">
+    <field name="scale" rel="ManyToOneRel" to="attestation.ratingscale">1</field>
+    <field name="name" type="CharField">44.0</field>
+    <field name="position" type="PositiveSmallIntegerField">44</field>
+  </object>
+  <object model="attestation.ratingscaleitem" pk="46">
+    <field name="scale" rel="ManyToOneRel" to="attestation.ratingscale">1</field>
+    <field name="name" type="CharField">45.0</field>
+    <field name="position" type="PositiveSmallIntegerField">45</field>
+  </object>
+  <object model="attestation.ratingscaleitem" pk="47">
+    <field name="scale" rel="ManyToOneRel" to="attestation.ratingscale">1</field>
+    <field name="name" type="CharField">46.0</field>
+    <field name="position" type="PositiveSmallIntegerField">46</field>
+  </object>
+  <object model="attestation.ratingscaleitem" pk="48">
+    <field name="scale" rel="ManyToOneRel" to="attestation.ratingscale">1</field>
+    <field name="name" type="CharField">47.0</field>
+    <field name="position" type="PositiveSmallIntegerField">47</field>
+  </object>
+  <object model="attestation.ratingscaleitem" pk="49">
+    <field name="scale" rel="ManyToOneRel" to="attestation.ratingscale">1</field>
+    <field name="name" type="CharField">48.0</field>
+    <field name="position" type="PositiveSmallIntegerField">48</field>
+  </object>
+  <object model="attestation.ratingscaleitem" pk="50">
+    <field name="scale" rel="ManyToOneRel" to="attestation.ratingscale">1</field>
+    <field name="name" type="CharField">49.0</field>
+    <field name="position" type="PositiveSmallIntegerField">49</field>
+  </object>
+  <object model="attestation.ratingscaleitem" pk="51">
+    <field name="scale" rel="ManyToOneRel" to="attestation.ratingscale">1</field>
+    <field name="name" type="CharField">50.0</field>
+    <field name="position" type="PositiveSmallIntegerField">50</field>
+  </object>
+  <object model="tasks.task" pk="1">
+    <field name="title" type="CharField">Exercise sheet TEMPLATE</field>
+    <field name="description" type="TextField">See moodle for exercise sheet</field>
+    <field name="publication_date" type="DateTimeField">2024-03-19T00:00:00</field>
+    <field name="submission_date" type="DateTimeField">2024-04-03T23:00:00</field>
+    <field name="submission_free_uploads" type="IntegerField">1</field>
+    <field name="submission_waitdelta" type="IntegerField">1</field>
+    <field name="submission_maxpossible" type="IntegerField">-1</field>
+    <field name="max_file_size" type="IntegerField">1000</field>
+    <field name="model_solution" rel="ManyToOneRel" to="solutions.solution">
+      <None/>
+    </field>
+    <field name="all_checker_finished" type="BooleanField">False</field>
+    <field name="final_grade_rating_scale" rel="ManyToOneRel" to="attestation.ratingscale">1</field>
+    <field name="warning_threshold" type="DecimalField">0.00</field>
+    <field name="only_trainers_publish" type="BooleanField">False</field>
+    <field name="jplag_up_to_date" type="BooleanField">False</field>
+    <field name="hide_solutions_of_expired_tasks" type="BooleanField">False</field>
+  </object>
+  <object model="checker.scriptchecker" pk="1">
+    <field name="created" type="DateTimeField">2024-03-19T16:40:26.363153</field>
+    <field name="order" type="IntegerField">1</field>
+    <field name="task" rel="ManyToOneRel" to="tasks.task">1</field>
+    <field name="public" type="BooleanField">True</field>
+    <field name="required" type="BooleanField">True</field>
+    <field name="always" type="BooleanField">True</field>
+    <field name="critical" type="BooleanField">False</field>
+    <field name="name" type="CharField">Check</field>
+    <field name="filename" type="CharField"/>
+    <field name="shell_script" type="FileField">CheckerFiles/check-praktomat-driver</field>
+    <field name="remove" type="CharField"/>
+    <field name="returns_html" type="BooleanField">False</field>
+    <field name="arguments" type="CharField">LANG</field>
+  </object>
+</django-objects>

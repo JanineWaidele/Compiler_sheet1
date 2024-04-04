@@ -83,5 +83,5 @@ class Symtab[K, T]:
         return st
     def mergeBack(self, st1: Symtab[K, T], st2: Symtab[K, T]):
         import common.symtab_merge as symtab_merge
-        merged = symtab_merge.merge(self, st1, st2)
+        merged = symtab_merge.merge(st1, st2)
         self.__vars = merged

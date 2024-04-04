@@ -77,6 +77,8 @@ def runFileTest(srcFile: str,
     inFile = base + ".in"
     input = readFileOpt(inFile)
     extraArgs = readFileOpt(base + ".args")
+    if extraArgs:
+        extraArgs = extraArgs.strip()
     err = getExpectedError(srcFile)
     hasErr = err is not None
     log.info(f'Running test on {srcFile}')
