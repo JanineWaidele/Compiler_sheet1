@@ -11,7 +11,7 @@ def renderValtype(t: WasmValtype) -> SExp:
 @dataclass(frozen=True)
 class WasmId:
     id: str
-    def __post_int__(self):
+    def __post_init__(self):
         if not self.id or self.id[0] != '$':
             raise ValueError(f'Invalid wasm identifier: {self.id}')
     def render(self) -> SExp:

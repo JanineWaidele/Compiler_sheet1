@@ -12,10 +12,13 @@ class TokenStream:
     Essentially an iterator with lookahead functionality.
     """
     eof = Token('$END', '')
-    def __init__(self, tokenIter: Iterator[Token]):
-        self.tokenIter = tokenIter
+    def __init__(self, tokens: Iterable[Token]):
+        self.tokenIter = iter(tokens)
         self._lookahead = None
     def next(self) -> Token:
+        """
+        Returns the next token, thereby consume the token.
+        """
         if self._lookahead is not None:
             x = self._lookahead
             self._lookahead = None
@@ -25,14 +28,29 @@ class TokenStream:
         except StopIteration:
             return TokenStream.eof
     def lookahead(self):
+        """
+        Returns the next token without consuming it.
+        """
         if self._lookahead is None:
             self._lookahead = self.next()
         return self._lookahead
+    def ensureNext(self, tokenType: str) -> Token:
+        """
+        Consumes the next token, ensuring that it has the given type.
+        """
+        t = self.next()
+        if t.type != tokenType:
+            raise ParseError(f'Expected token {tokenType} got {t} (type: {t.type})')
+        else:
+            return t
     def ensureEof(self, code: str):
-       t = self.lookahead()
-       if t != TokenStream.eof:
-           raise ParseError(f'Parsing {code} did not consume all tokens. ' \
-               f'Tokens left: {[t] + self._list()}')
+        """
+        Ensures that the next token is end-of-file.
+        """
+        t = self.lookahead()
+        if t != TokenStream.eof:
+            raise ParseError(f'Parsing {code} did not consume all tokens. ' \
+                f'Tokens left: {[t] + self._list()}')
     def _list(self) -> list[Token]:
         l: list[Token] = []
         if self._lookahead:
@@ -94,19 +112,23 @@ class ParseError(Exception):
     def __init__(self, msg: str):
         super().__init__(msg)
 
+def mkLexer(grammarFile: str) -> Lark:
+    return mkParser('earley', grammarFile, 'start')
+
 def mkParser(alg: ParseAlg, grammarFile: str, start: str) -> Lark:
     grammar = utils.readTextFile(grammarFile)
     try:
         match alg:
             case 'earley':
                 return Lark(grammar, start=start, ambiguity='explicit', parser='earley',
-                            debug=True)
+                            lexer='basic', debug=True)
             case 'lalr':
-                return Lark(grammar, start=start, parser='lalr', strict=True, debug=True)
+                return Lark(grammar, start=start, parser='lalr', strict=True,
+                            debug=True, lexer='basic')
     except exceptions.LarkError as err:
         raise ParseError(f'Error constructing {alg} parser from grammar in {grammarFile}: {err}')
 
-def parseAsParseTree(parser: Lark, s: str, png: Optional[str]) -> ParseTree:
+def _parseAsParseTree(parser: Lark, s: str, png: Optional[str]) -> ParseTree:
     s = s.rstrip() + '\n' # ensure there is one trailing newline
     try:
         lexed = parser.lex(s)
@@ -124,3 +146,15 @@ def parseAsParseTree(parser: Lark, s: str, png: Optional[str]) -> ParseTree:
         raise ParseError(f'Got multiple parse trees (see logfile or png). ' \
             'You need to disambiguate your grammer.')
     return parseTree
+
+def parseAsTree(args: ParserArgs, defaultGrammarFile: str, startSym: str) -> ParseTree:
+    if args.grammarFile is None:
+        grammarFile = defaultGrammarFile
+    else:
+        grammarFile = args.grammarFile
+    parser = mkParser(args.parseAlg, grammarFile, startSym)
+    parseTree = _parseAsParseTree(parser, args.code, args.parseTreePng)
+    return parseTree
+
+def unexpectedToken(t: Token, expected: str) -> Never:
+    raise ParseError(f'Unexpected token {t} (token type: {t.type}). Expected: {expected}')

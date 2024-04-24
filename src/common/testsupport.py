@@ -64,13 +64,18 @@ def getExpectedError(srcFile: str) -> Optional[tuple[ErrorKind, str]]:
 
 def readFileOpt(path: str) -> str|None:
     if shell.isFile(path):
-        return shell.readFile(path)
+        return shell.readFile(path).strip()
     else:
         return None
 
+# strict: error message must match the one provide in the input file
+# lenient: error message must not match, but the test command must fail
+# skip: tests for errors are skipped
+type ErrorMode = Literal['strict', 'lenient']
+
 def runFileTest(srcFile: str,
                 run: Callable[[bool, str|None, str|None], shell.RunResult],
-                lenientRunError: bool=False):
+                errorMode: ErrorMode = 'strict'):
     if not shell.isFile(srcFile):
         raise Exception(f'Source file {srcFile} does not exist')
     base = shell.removeExt(srcFile)
@@ -94,6 +99,7 @@ def runFileTest(srcFile: str,
         errDetails = errDetails.lower()
         expectedExitCode = constants.COMPILE_ERROR_EXIT_CODE if errKind == 'type error' \
             else constants.RUN_ERROR_EXIT_CODE
+        lenientRunError = (errorMode == 'lenient')
         expectedExitCodes = [expectedExitCode] + ([0] if lenientRunError else [])
         assert result.exitcode in expectedExitCodes
         if not lenientRunError:
@@ -101,7 +107,8 @@ def runFileTest(srcFile: str,
             assert errDetails in realErr
 
 def collectTestFiles(baseDirs: list[str] = ['test_files'],
-                     langOnly: Optional[list[str]] = None) -> list[tuple[str, str]]:
+                     langOnly: Optional[list[str]] = None,
+                     ignoreErrorFiles: bool = False) -> list[tuple[str, str]]:
     """
     Returns a list with tuples (lang, file).
     """
@@ -139,6 +146,11 @@ def collectTestFiles(baseDirs: list[str] = ['test_files'],
         for k, v in result:
             if k in langOnly:
                 filteredResult.append((k, v))
-        return filteredResult
-    else:
-        return result
+        result = filteredResult
+    if ignoreErrorFiles:
+        filteredResult: list[tuple[str, str]] = []
+        for lang, file in result:
+            if getExpectedError(file) is None:
+                filteredResult.append((lang, file))
+        result = filteredResult
+    return result

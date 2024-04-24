@@ -26,7 +26,8 @@ cd $(dirname $0)/..
 docker build --platform "$platform" --tag $TAG1 --tag $TAG2 --file docker/Dockerfile . || exit 1
 
 echo "Building done, now pushing ..."
-echo "Tags: $TAG1 and $TAG2 ..."
 
 docker push $TAG1
 docker push $TAG2
+
+echo "All done, tags: $TAG1 and $TAG2 ..."

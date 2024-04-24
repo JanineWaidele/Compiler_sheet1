@@ -54,9 +54,18 @@ exit codes signal a bug in the compiler itself.'''
                                         'interpretes the TAC (only works for lang_var and lang_loop)')
     tacInterp.add_argument('--level', help='The loglevel (debug, info, warn)')
     tacInterp.add_argument('input', help='Input file .py')
-    tacInterp.add_argument('--wat2wasm', default='wat2wasm', help='Path to the wat2wasm tool')
     tacInterp.add_argument('--print-tac', action='store_true',
                            help='Print the three-address code instructions')
+
+
+    assembly = subparsers.add_parser('assembly',
+                                      help='Compiles the given file to MIPS assembly ' \
+                                          '(only works for lang_var and lang_loop)')
+    assembly.add_argument('--level', help='The loglevel (debug, info, warn)')
+    assembly.add_argument('--max-registers', type=int,
+                          help="Max number of registers used")
+    assembly.add_argument('input', help='Input file .py')
+    assembly.add_argument('output', default='out.as', help='Output file .as (default: out.as)')
 
     pyrun = subparsers.add_parser('pyrun',
                                   help='Runs the given file through the python interpreter')
@@ -163,9 +172,14 @@ def main():
                 parseFun = getFun(parseMod, 'parseModule')
                 genericParser.parseWithOwnParser(args.input, parserArgs, ast, parseFun)
         case "tacInterp":
-            compileArgs = genericCompiler.Args(args.input, '/tmp/dummy.wasm', args.wat2wasm, 1, 1)
-            tac_interp = utils.importModuleNotInStudent('compilers.assembly.tac_interp')
-            tac_interp.interpFile(compileArgs, args.print_tac)
+            compileArgs = genericCompiler.Args(args.input, '/tmp/dummy.wasm', 'wat2wasm', 1, 1)
+            interp = utils.importModuleNotInStudent('compilers.assembly.interp')
+            interp.interpFile(compileArgs, args.print_tac)
+        case "assembly":
+            compileArgs = genericCompiler.Args(args.input, args.output, 'wat2wasm', 1, 1,
+                                               args.max_registers)
+            tac_comp = utils.importModuleNotInStudent('compilers.assembly.compiler')
+            tac_comp.compileFile(compileArgs)
         case _:
             utils.abort(f'Unknown command: {args.cmd}')
 

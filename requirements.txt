@@ -1,5 +1,5 @@
 prettyprinter == 0.18.*
-libPyshell == 0.3.*
+libPyshell == 0.4.*
 pytest == 8.0.*
 lark[interegular] == 1.1.*
 pydot == 1.2.*

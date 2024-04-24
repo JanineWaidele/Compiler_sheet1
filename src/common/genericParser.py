@@ -62,8 +62,12 @@ def transExp(e: ast.expr, m: Any, lang: Language) -> Any:
                 return m.IntConst(c)
             elif type(c) is bool:
                 return m.BoolConst(c)
+            elif type(c) is str:
+                unsupported(f'string constant {repr(c)}')
+            elif type(c) is float:
+                unsupported(f'float constant {repr(c)}')
             else:
-                unsupported(f'constant {pp(c)}')
+                unsupported(f'constant {c}')
         case ast.Name(v, _):
             return m.Name(m.Ident(v))
         case ast.Call(ast.Name(f, _), args, []) if lang != 'fun':

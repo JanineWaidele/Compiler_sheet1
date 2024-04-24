@@ -10,7 +10,7 @@ jobs:
   build-test:
     runs-on: ubuntu-latest
     container:
-      image: skogsbaer/compiler-construction-wasm_linux-amd64:20240319194058
+      image: skogsbaer/compiler-construction-wasm_linux-amd64:20240403224157
     steps:
       - uses: actions/checkout@v4
       - name: Uptodate

@@ -37,16 +37,17 @@ def wat2wasm(wat2wasmCmd: str, input: str, output: str):
 class Args:
     input: str
     output: str
-    wat2wasm: str
-    maxMemSize: Optional[int]
-    maxArraySize: Optional[int]
+    wat2wasm: str = 'wat2wasm'
+    maxMemSize: Optional[int] = None
+    maxArraySize: Optional[int] = None
+    maxRegisters: Optional[int] = None
 
 def compileMain(args: Args, compileFun: CompileFun, astMod: Any) -> WasmModule:
     output = args.output
     outputBase, outputExt = shell.splitExt(output)
     outputWat = outputBase + '.wat'
-    if outputExt not in ['.wat', '.wasm']:
-        utils.abort(f'Extension of output file must be .wat or .wasm')
+    if outputExt not in ['.wat', '.wasm', '.as']:
+        utils.abort(f'Extension of output file must be .wat or .wasm or .as')
     cfg = CompilerConfig(maxMemSize=args.maxMemSize or CompilerConfig.defaultMaxMemSize,
                          maxArraySize=args.maxArraySize or CompilerConfig.defaultMaxArraySize)
     wasmMod = compileToWat(compileFun, astMod, cfg, args.input, outputWat)

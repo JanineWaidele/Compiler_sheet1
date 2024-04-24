@@ -5,11 +5,12 @@ import common.utils as utils
 import common.genericParser as genericParser
 import lang_var.var_ast as var_ast
 import common.testsupport as testsupport
+from typing import Any
 
-# NOTE: tests in this module are also executed in student repos. There is another module
-# test_parserVar, which contains tests not executed in the student repo. The reason for
-# this setup is that the parser for lang_var is not available to students.
-def importModVarParser():
+pytestmark = pytest.mark.instructor
+
+# We have to import this module dynamically because it is not present in student code
+def importModVarParser() -> Any:
     return utils.importModuleNotInStudent('parsers.lang_var.var_parser')
 
 def runParserTest(file: str, lang: str, alg: p.ParseAlg):
@@ -37,20 +38,6 @@ def test_varParser(lang: str, srcFile: str, alg: p.ParseAlg):
 def parseModule(args: p.ParserArgs):
     varParser = importModVarParser()
     return varParser.parseModule(args)
-
-def test_ambiguous():
-    code = 'print(1-2-3)'
-    args = p.ParserArgs(code, 'earley', None, 'src/parsers/lang_var/var_grammar_ambiguous.lark')
-    with pytest.raises(p.ParseError) as err:
-        parseModule(args)
-    assert 'multiple parse trees' in str(err)
-
-def test_shiftReduceConflict():
-    code = 'print(1)'
-    args = p.ParserArgs(code, 'lalr', None, 'src/parsers/lang_var/var_grammar_lalr-conflict.lark')
-    with pytest.raises(p.ParseError) as err:
-        parseModule(args)
-    assert 'Shift/Reduce conflict for terminal NEWLINE' in str(err)
 
 def test_parseError():
     code = 'print(1-)'

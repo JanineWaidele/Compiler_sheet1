@@ -91,3 +91,20 @@ def importModuleNotInStudent(modName: str) -> Any:
         e.add_note(f'Could not import {modName}. Are in the student repo? '\
                         'Then deactivate the test triggering this error.')
         raise e
+
+def splitIf[T](l: list[T], pred: Callable[[T], bool],
+               includeMatch: Literal['left', 'right']='right') -> tuple[list[T], list[T]]:
+    """
+    splitIf(l, pred) splits the list l into two lists, such that the first list
+    contains all elements of l up to the first element, but not including, for which
+    pred is true.
+
+    If the optional argument includeMatch is 'left', the first list will include the
+    element for which pred is true.
+    """
+    for i in range(len(l)):
+        if pred(l[i]):
+            if includeMatch == 'left':
+                i = i + 1
+            return (l[:i], l[i:])
+    return (l, [])

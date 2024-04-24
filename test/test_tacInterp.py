@@ -4,6 +4,8 @@ import common.testsupport as testsupport
 import common.log as log
 import shell
 
+pytestmark = pytest.mark.instructor
+
 def params() -> list[tuple[str, str]]:
     l = testsupport.collectTestFiles(['test_files'], ['var', 'simple'])
     return l

@@ -1,4 +1,4 @@
-from tac.tac_ast import *
+from assembly.tacSpill_ast import *
 
 def prettyPrim(p: prim) -> str:
     match p:
@@ -30,3 +30,14 @@ def prettyInstr(instr: instr) -> str:
             return f'  GOTO {label}'
         case Label(label):
             return f'{label}:'
+        case Spill(x, orig):
+            return f'SPILL({x}, {orig})'
+        case Unspill(x, orig):
+            return f'UNSPILL({x}, {orig})'
+
+def prettyInstrs(l: list[instr], oneLine: bool=False) -> str:
+    out = [prettyInstr(i) for i in l]
+    if oneLine:
+        return ';'.join([x.strip() for x in out])
+    else:
+        return '\n'.join(out)

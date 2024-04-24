@@ -34,7 +34,8 @@ RUN apt-get clean && apt-get update && apt-get install -y \
 
 RUN apt-get install -y \
   wabt \
-  graphviz
+  graphviz \
+  spim
 
 RUN curl -sL https://deb.nodesource.com/setup_21.x | bash
 RUN apt-get install -y nodejs

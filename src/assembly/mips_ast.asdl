@@ -1,0 +1,21 @@
+module Mips
+{
+    op = Add | Sub | Mul
+       | Less | LessEq | Greater | GreaterEq | Eq | NotEq
+    opI = AddI | LessI
+
+    imm = Imm(int value) -- only 16bit!
+    reg = Reg(string name)
+
+    instr = Op(op op, reg target, reg left, reg right)
+          | OpI(opI, reg target, reg left, imm right)
+          | LoadWord(reg target, imm offset, reg src)
+          | LoadI(reg target, imm value)
+          | LoadA(reg target, str label)
+          | StoreWord(reg src, imm offset, reg baseAddr)
+          | BranchNeqZero(reg reg, string label)
+          | Branch(string label)
+          | Move(reg target, reg source)
+          | Syscall
+          | Label(string label)
+}

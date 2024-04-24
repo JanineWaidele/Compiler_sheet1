@@ -1,0 +1,18 @@
+module Tac
+{
+    op = Op(string name)
+
+    prim = Const(int value)
+        | Name(ident var)
+
+    exp = Prim(prim p)
+        | BinOp(prim left, op op, prim right)
+
+    instr = Assign(ident var, exp left)
+         | Call(ident? var, ident name, prim* args)   -- print, input_int
+         | GotoIf(prim test, string label)
+         | Goto(string label)
+         | Label(string label)
+         | Spill(ident var, string origName)
+         | Unspill(ident var, string origName)
+}

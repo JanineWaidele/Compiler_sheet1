@@ -14,6 +14,6 @@ def test_interp(lang: str, srcFile: str):
     testsupport.runFileTest(
         srcFile,
         lambda captureErr, input, _extraArgs: runTest(lang, srcFile, input),
-        lenientRunError=True
+        errorMode='lenient'
     )
 

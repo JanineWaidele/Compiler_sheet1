@@ -1,6 +1,6 @@
 from common.wasm import *
 from typing import *
-import tac.tac_ast as tac
+import assembly.tac_ast as tac
 from common.utils import assertNotNone
 
 class Emitter:
@@ -29,7 +29,7 @@ def toTac(instrs: list[WasmInstrL]) -> tuple[Optional[tac.prim], list[tac.instr]
 
 def toTacR(rInstrs: list[WasmInstrL]) -> tuple[Optional[tac.prim], list[tac.instr]]:
     e = Emitter()
-    (val, rest) = toTacSingle(rInstrs, e)
+    (val, rest) = toTacSingle(rInstrs, None, e)
     if rest:
         (_, l) = toTacR(rest)
     else:
@@ -37,8 +37,12 @@ def toTacR(rInstrs: list[WasmInstrL]) -> tuple[Optional[tac.prim], list[tac.inst
     return (val, l + e.instrs)
 
 def callInfo(id: WasmId) -> tuple[int, bool]:
+    """
+    Given the ID of a function, returns the number of arguments and
+    wether the function returns a value.
+    """
     match id.id:
-        case '$print_i64' | '$print_i32' : return (1, False)
+        case '$print_i64' | '$print_i32' | '$print_bool': return (1, False)
         case '$input_i64': return (0, True)
         case s:
             raise ValueError(f'Unknown function: {s}')
@@ -46,35 +50,36 @@ def callInfo(id: WasmId) -> tuple[int, bool]:
 def downcast(l: list[WasmInstr]) -> list[WasmInstrL]:
     return cast(list[WasmInstrL], l)
 
-def toTacSingle(rInstrs: list[WasmInstrL], e: Emitter) -> tuple[Optional[tac.prim], list[WasmInstrL]]:
+def toTacSingle(rInstrs: list[WasmInstrL], targetVar: Optional[tac.ident], e: Emitter) -> tuple[Optional[tac.prim], list[WasmInstrL]]:
     match rInstrs:
         case [WasmInstrVarLocal(op, x), *rest]:
             if op == 'get':
                 return (tac.Name(tac.Ident(x.id)), rest)
             else:
-                (val, rest) = toTacSingleNotNone(rest, e)
-                e.emit(tac.Assign(tac.Ident(x.id), tac.Prim(val)))
+                tacVar = tac.Ident(x.id)
+                (val, rest) = toTacSingleNotNone(rest, tacVar, e)
+                e.emit(tac.Assign(tacVar, tac.Prim(val)))
                 if op == 'set':
                     res = None
                 else:
-                    res = tac.Name(tac.Ident(x.id))
+                    res = tac.Name(tacVar)
                 return (res, rest)
         case [WasmInstrNumBinOp(_, op), *rest] | [WasmInstrIntRelOp(_, op), *rest]:
-            (right, rest) = toTacSingleNotNone(rest, e)
-            (left, rest) = toTacSingleNotNone(rest, e)
+            (right, rest) = toTacSingleNotNone(rest, None, e)
+            (left, rest) = toTacSingleNotNone(rest, None, e)
             # no optimization
             opCode = op.upper()
-            targetReg = e.freshReg()
+            targetReg = targetVar or e.freshReg()
             e.emit(tac.Assign(targetReg, tac.BinOp(left, tac.Op(opCode), right)))
             return (tac.Name(targetReg), rest)
         case [WasmInstrCall(name), *rest]:
             (n, hasResult) = callInfo(name)
             args = []
             for _ in range(n):
-                (arg, rest) = toTacSingleNotNone(rest, e)
+                (arg, rest) = toTacSingleNotNone(rest, None, e)
                 args = [arg] + args
             if hasResult:
-                targetReg = e.freshReg()
+                targetReg = targetVar or e.freshReg()
             else:
                 targetReg = None
             e.emit(tac.Call(targetReg, tac.Ident(name.id), args))
@@ -85,22 +90,23 @@ def toTacSingle(rInstrs: list[WasmInstrL], e: Emitter) -> tuple[Optional[tac.pri
             else:
                 raise ValueError(f'float constants not supported in TAC')
         case [WasmInstrBranch(target, True), *rest]: # conditional branch
-            (val, rest) = toTacSingleNotNone(rest, e)
+            (val, rest) = toTacSingleNotNone(rest, None, e)
             e.emit(tac.GotoIf(val, target.id))
             return (None, rest)
         case [WasmInstrBranch(target, False), *rest]: # unconditional branch
             e.emit(tac.Goto(target.id))
             return (None, rest)
         case [WasmInstrIf(_, [], elseInstrs), *rest]:
-            (val, rest) = toTacSingleNotNone(rest, e)
+            (val, rest) = toTacSingleNotNone(rest, None, e)
             labelEnd = e.freshLabel('end')
             e.emit(tac.GotoIf(val, labelEnd))
             (_, elseInstrsTac) = toTac(downcast(elseInstrs))
             e.add(elseInstrsTac)
+            e.emit(tac.Label(labelEnd))
             return (None, rest)
         case [WasmInstrIf(resTy, thenInstrs, elseInstrs), *rest]:
-            (val, rest) = toTacSingleNotNone(rest, e)
-            targetReg = e.freshReg()
+            (val, rest) = toTacSingleNotNone(rest, None, e)
+            targetReg = targetVar or e.freshReg()
             (valElse, elseInstrsTac) = toTac(downcast(elseInstrs))
             (valThen, thenInstrsTac) = toTac(downcast(thenInstrs))
             labelThen = e.freshLabel('then')
@@ -128,7 +134,7 @@ def toTacSingle(rInstrs: list[WasmInstrL], e: Emitter) -> tuple[Optional[tac.pri
             (val, instrsTac) = toTac(downcast(body))
             e.add(instrsTac)
             if resultTy is not None:
-                targetReg = e.freshReg()
+                targetReg = targetVar or e.freshReg()
                 e.emit(tac.Assign(targetReg, tac.Prim(assertNotNone(val))))
                 e.emit(tac.Label(label.id))
                 return (tac.Name(targetReg), rest)
@@ -140,8 +146,8 @@ def toTacSingle(rInstrs: list[WasmInstrL], e: Emitter) -> tuple[Optional[tac.pri
         case _:
             raise ValueError(f"Don't know what to do with reversed stack {rInstrs}")
 
-def toTacSingleNotNone(rInstrs: list[WasmInstrL], e: Emitter) -> tuple[tac.prim, list[WasmInstrL]]:
-    (x, rest) = toTacSingle(rInstrs, e)
+def toTacSingleNotNone(rInstrs: list[WasmInstrL], targetVar: Optional[tac.ident], e: Emitter) -> tuple[tac.prim, list[WasmInstrL]]:
+    (x, rest) = toTacSingle(rInstrs, targetVar, e)
     if x is None:
         raise ValueError(f'toTacSingle returned None for rInstrs={rInstrs}')
     return (x, rest)

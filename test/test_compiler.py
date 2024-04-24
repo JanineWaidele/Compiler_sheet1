@@ -4,6 +4,8 @@ import pytest
 import common.log as log
 import common.constants as constants
 
+pytestmark = pytest.mark.instructor
+
 def run(wasm: str, input: str|None) -> shell.RunResult:
     log.info(f'Running the program')
     cmd = ['timeout', '10s', 'bash', './wasm-support/run_iwasm', wasm]
@@ -21,6 +23,8 @@ def runTest(lang: str, srcFile: str, tmp: str, captureErr: bool, input: str|None
     log.info(f'Running command {cmd}')
     res = shell.run(cmd,
                     captureStderr=captureErr, captureStdout=False, onError='ignore')
+    if captureErr and res.stderr:
+        log.info(f'Output on stderr: {res.stderr}')
     if res.exitcode == 0:
         return run(shell.pjoin(tmp, 'out.wasm'), input)
     else:

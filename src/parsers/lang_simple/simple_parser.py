@@ -3,15 +3,10 @@ from parsers.lang_simple.simple_ast import *
 from parsers.common import *
 import common.log as log
 
-grammarPath = "./src/parsers/lang_simple/"
+grammarFile = "./src/parsers/lang_simple/simple_grammar.lark"
 
 def parse(args: ParserArgs) -> exp:
-    if args.grammarFile is None:
-        grammarFile = grammarPath + f"simple_grammar.lark"
-    else:
-        grammarFile = args.grammarFile
-    parser = mkParser(args.parseAlg, grammarFile, 'exp')
-    parseTree = parseAsParseTree(parser, args.code, args.parseTreePng)
+    parseTree = parseAsTree(args, grammarFile, 'exp')
     ast = parseTreeToExpAst(parseTree)
     log.debug(f'AST: {ast}')
     return ast
