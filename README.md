@@ -112,7 +112,8 @@ preferred way to get everything running under Windows.
 * cmake, to build the native extension functions for wasm-micro-runtime.
 * nodejs and npm
 * bash
-* [SPIM](https://spimsimulator.sourceforge.net/), a MIPS32 simulator.
+* timeout command.
+* [SPIM](https://spimsimulator.sourceforge.net/), a MIPS32 simulator (version 8 or 9)
 * Optional, for visualizing graph trees: graphviz
 * Supported platforms: Mac OSX and Linux. Windows should work as well, but I did not test. I recommand using docker if you are running Windows.
 
