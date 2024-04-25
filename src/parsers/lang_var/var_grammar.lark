@@ -1,18 +1,38 @@
 %import common (NEWLINE, WS_INLINE, SH_COMMENT, CNAME, INT)
+
 %ignore WS_INLINE
 %ignore SH_COMMENT
 
-INT: /[0-9]+/
-WS: /[ \t\f\r\n]/+
-%ignore WS
+STRING: /".*?(?<!\\)"/
+DIGIT: "0".."9"
+LBRACE: "{"
+RBRACE: "}"
+COLON: ":"
+COMMA: ","
+MINUS: "-"
+LETTER: /[a-zA-Z]/
 
-exp_2: INT             -> int_exp
+exp_2: INT              -> int_exp
      | "(" exp ")"     -> paren_exp
 
-exp_1: exp_1 "*" exp_2 -> mul_exp
+PRINT: "print"
+PRINT_EXP: PRINT "(" STRING ")"
+
+exp_3: exp_3 MINUS exp_2  -> sub_exp
+     | exp_3           -> exp_3
+
+exp_1: exp_1 "*" exp_2  -> mul_exp
      | exp_2           -> exp_2
 
 exp: exp "+" exp_1    -> add_exp
    | exp_1            -> exp_1
 
-start: lvar
+stmt: exp             -> exp_stmt
+   | CNAME "=" exp    -> exp_assign
+
+stmt_newline: stmt NEWLINE
+lvar: stmt_newline+ 
+
+input_int: CNAME "=" "input_int()" -> input_exp
+
+start: lvar PRINT_EXP NEWLINE
