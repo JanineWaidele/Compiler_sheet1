@@ -1,0 +1,18 @@
+%import common (NEWLINE, WS_INLINE, SH_COMMENT, CNAME, INT)
+%ignore WS_INLINE
+%ignore SH_COMMENT
+
+INT: /[0-9]+/
+WS: /[ \t\f\r\n]/+
+%ignore WS
+
+exp_2: INT             -> int_exp
+     | "(" exp ")"     -> paren_exp
+
+exp_1: exp_1 "*" exp_2 -> mul_exp
+     | exp_2           -> exp_2
+
+exp: exp "+" exp_1    -> add_exp
+   | exp_1            -> exp_1
+
+start: lvar
