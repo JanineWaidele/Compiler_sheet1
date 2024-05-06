@@ -19,7 +19,8 @@ def parseTreeToExpAst(t: ParseTree) -> exp:
         case 'variable_exp':
             return Name(Ident(str(asToken(t.children[0]))))
         case 'usub_exp':
-            return BinOp(IntConst(0), Sub(), parseTreeToExpAst(asTree(t.children[0])))
+            return UnOp(USub(), parseTreeToExpAst(asTree(t.children[0])))
+            #return BinOp(IntConst(0), Sub(), parseTreeToExpAst(asTree(t.children[0])))
         case 'add_exp':
             e1, e2 = [asTree(c) for c in t.children]
             return BinOp(parseTreeToExpAst(e1), Add(), parseTreeToExpAst(e2))
@@ -33,10 +34,10 @@ def parseTreeToExpAst(t: ParseTree) -> exp:
             return parseTreeToExpAst(asTree(t.children[0]))
         case 'exp_input':
             #print(t.data)
-            return Call(Ident("input_int"), [])
+            return Call(Ident(str(asToken(t.children[0]))), [])
         case 'exp_print':
             #print(t.children)
-            return Call(Ident("print"), [parseTreeToExpAst(asTree(t.children[1]))])
+            return Call(Ident(str(asToken(t.children[0]))), [parseTreeToExpAst(asTree(t.children[1]))])
         case kind:
             raise Exception(f'unhandled parse tree of kind {kind} for exp: {t}')
     

@@ -14,6 +14,7 @@ LETTER: /[a-zA-Z]/
 exp_2: INT              -> int_exp
      | "(" exp ")"     -> paren_exp
      | CNAME            -> variable_exp
+     | INPUT_INT "(" ")" -> exp_input
 
 PRINT: "print"
 PRINT_EXP: PRINT "(" STRING ")"
@@ -28,7 +29,6 @@ exp_1: exp_1 "*" exp_2 -> mul_exp
 
 exp: exp "+" exp_1 -> add_exp 
      | exp_2 "-" exp_2 -> sub_exp 
-     | INPUT_INT "(" ")" -> exp_input
      | CNAME "(" exp ")" -> exp_print
      | "-" exp_2         -> usub_exp
      | exp_1 -> exp_1
