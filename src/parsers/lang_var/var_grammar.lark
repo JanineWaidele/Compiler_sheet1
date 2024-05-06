@@ -17,14 +17,19 @@ exp_2: INT              -> int_exp
 PRINT: "print"
 PRINT_EXP: PRINT "(" STRING ")"
 
-exp_3: exp_3 "-" exp_2  -> sub_exp
-     | exp_3           -> exp_3
+INPUT_INT: "input_int"
 
-exp_1: (exp_1 "*" exp_2)  -> mul_exp
-     | exp_2           -> exp_2
+exp_3: exp_3 "-" exp_2 -> sub_exp 
+     | exp_3 -> exp_3
 
-exp: exp "+" exp_1    -> add_exp
-   | exp_1            -> exp_1
+exp_1: exp_1 "*" exp_2 -> mul_exp 
+     | exp_2 -> exp_2
+
+exp: exp "+" exp_1 -> add_exp 
+     | exp_2 "-" exp_2 -> sub_exp 
+     | INPUT_INT "(" ")" -> exp_input
+     | PRINT "(" exp ")" -> exp_print
+     | exp_1 -> exp_1
 
 stmt: exp             -> exp_stmt
    | CNAME "=" exp    -> exp_assign
@@ -32,6 +37,4 @@ stmt: exp             -> exp_stmt
 stmt_newline: stmt NEWLINE
 lvar: stmt_newline+ 
 
-input_int: CNAME "=" "input_int()" -> input_exp
-
-start: lvar PRINT_EXP NEWLINE
+start: lvar PRINT_EXP  NEWLINE

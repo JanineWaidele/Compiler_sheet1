@@ -1,2 +1,2 @@
-x = (3 + 1)
-y = 2
+x = input_int()
+print(40 + (x + 2))
