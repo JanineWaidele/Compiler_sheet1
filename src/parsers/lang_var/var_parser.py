@@ -15,9 +15,6 @@ def parse(args: ParserArgs) -> exp:
 def parseTreeToExpAst(t: ParseTree) -> exp:
 
     match t.data:
-        case 'nl_exp':
-            print(t.children)
-            return IntConst(1)
         case 'int_exp':
             return IntConst(int(asToken(t.children[0])))
         case 'variable_exp':
@@ -35,9 +32,16 @@ def parseTreeToExpAst(t: ParseTree) -> exp:
         case 'sub_exp':
             e1, e2 = [asTree(c) for c in t.children]
             return BinOp(parseTreeToExpAst(e1), Sub(), parseTreeToExpAst(e2))
+        case 'sub_mult_exp':
+            e1, e2, e3 = [asTree(c) for c in t.children]
+            return BinOp(BinOp(parseTreeToExpAst(e1), Sub(), parseTreeToExpAst(e2)), Sub(), parseTreeToExpAst(e3))
         case 'exp_1' | 'exp_2' | 'exp_3' | 'paren_exp':
             return parseTreeToExpAst(asTree(t.children[0]))
         case 'exp_input':
+            return Call(Ident(str(asToken(t.children[0]))), [])
+        case 'exp_input_int':
+            return Call(Ident(str(asToken(t.children[0]))), [IntConst(int(asToken(t.children[1])))])
+        case 'exp_print_empty':
             return Call(Ident(str(asToken(t.children[0]))), [])
         case 'exp_print':
             return Call(Ident(str(asToken(t.children[0]))), [parseTreeToExpAst(asTree(t.children[1]))])
@@ -51,13 +55,10 @@ def parseModule(args: ParserArgs) -> mod:
 def parseTreeToStmtAst(t: ParseTree) -> stmt:
     match t.data:
         case 'exp_stmt':
-            print('exp_stmt')
             return StmtExp(parseTreeToExpAst(asTree(t.children[0])))
         case 'exp_assign':
-            print('exp_assign')
             return Assign(Ident(str(asToken(t.children[0]))), parseTreeToExpAst(asTree(t.children[1])))
         case 'stmt_newline':
-            print('stmt_newline')
             return parseTreeToStmtAst(asTree(t.children[0]))
         case kind:
             raise Exception(f'unhandled parse tree of kind {kind} for stmt: {t}')
