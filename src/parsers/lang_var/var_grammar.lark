@@ -11,10 +11,13 @@ COLON: ":"
 COMMA: ","
 LETTER: /[a-zA-Z]/
 
-exp_2: INT              -> int_exp
-     | "(" exp ")"     -> paren_exp
-     | CNAME            -> variable_exp
+exp_2: INT               -> int_exp
+     | "(" exp ")"       -> paren_exp
+     | CNAME             -> variable_exp
      | INPUT_INT "(" ")" -> exp_input
+     | "-" exp_2         -> usub_exp
+     | NEWLINE exp_2
+
 
 PRINT: "print"
 PRINT_EXP: PRINT "(" STRING ")"
@@ -22,16 +25,16 @@ PRINT_EXP: PRINT "(" STRING ")"
 INPUT_INT: "input_int"
 
 exp_3: exp_3 "-" exp_2 -> sub_exp 
-     | exp_3 -> exp_3
+     | exp_3           -> exp_3
 
 exp_1: exp_1 "*" exp_2 -> mul_exp 
-     | exp_2 -> exp_2
+     | exp_2           -> exp_2
 
-exp: exp "+" exp_1 -> add_exp 
-     | exp_2 "-" exp_2 -> sub_exp 
-     | CNAME "(" exp ")" -> exp_print
-     | "-" exp_2         -> usub_exp
-     | exp_1 -> exp_1
+exp: exp "+" exp_1                      -> add_exp 
+     | exp_2 "-" exp_2                  -> sub_exp 
+     | CNAME "(" exp ")"                -> exp_print
+     | CNAME "(" exp_2 COMMA exp_2 ")"  -> comma_exp
+     | exp_1                            -> exp_1
 
 stmt: exp             -> exp_stmt
    | CNAME "=" exp    -> exp_assign
@@ -39,4 +42,4 @@ stmt: exp             -> exp_stmt
 stmt_newline: stmt NEWLINE
 lvar: stmt_newline+ 
 
-start: lvar PRINT_EXP  NEWLINE
+start: lvar PRINT_EXP NEWLINE 
