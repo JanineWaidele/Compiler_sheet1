@@ -64,7 +64,7 @@ def expToWasm(expr: exp) -> list[WasmInstr]:
 
         case ArrayInitDyn(len, elemInit, _):
             # TODO
-            r:List[WasmInstr] = []
+            res:List[WasmInstr] = []
             l = 0
             match len:
                 case IntConst(val,_):
@@ -75,22 +75,22 @@ def expToWasm(expr: exp) -> list[WasmInstr]:
             match elemInit:
                 case Name(var,_):
                     for _ in range(l):
-                        r += [WasmInstrVarLocal('tee', WasmId(var.name)), WasmInstrVarLocal('get', WasmId(var.name))]
+                        res += [WasmInstrVarLocal('tee', WasmId(var.name)), WasmInstrVarLocal('get', WasmId(var.name))]
                 case IntConst(val,_):
                     for _ in range(l):
-                        r += [WasmInstrMem('i64', 'store')]
-                        r += expToWasm(AtomExp(elemInit))
+                        res += [WasmInstrMem('i64', 'store')]
+                        res += expToWasm(AtomExp(elemInit))
                 case BoolConst(val,_):
                     for _ in range(l):
-                        r += expToWasm(AtomExp(elemInit))
+                        res += expToWasm(AtomExp(elemInit))
                         #r += arrayOffsetInstrs()
-                        #r += [WasmInstrNumBinOp('i32', 'add'), WasmInstrConst('i32', 4)]
-                        r += [WasmInstrVarLocal('set', WasmId(tmp_var))]
-            return r
+                        res += [WasmInstrConst('i32', 4), WasmInstrNumBinOp('i32', 'add')]
+                        res += [WasmInstrVarLocal('set', WasmId(tmp_var))]
+            return res
 
         case ArrayInitStatic(elemInit, _):
             # TODO: is ty needed?
-            r:List[WasmInstr] = []
+            r: List[WasmInstr] = []
             for e in elemInit:
                 match e:
                     case Name(var,_):
@@ -100,7 +100,7 @@ def expToWasm(expr: exp) -> list[WasmInstr]:
                         r += expToWasm(AtomExp(e))
                     case BoolConst(val,_):
                         r += expToWasm(AtomExp(e))
-                        #r += [WasmInstrNumBinOp('i32', 'add')]
+                        r += [WasmInstrNumBinOp('i32', 'add')]
             return r
 
         case Subscript(array, i, _):
@@ -128,7 +128,7 @@ def expToWasm(expr: exp) -> list[WasmInstr]:
                     pass
             return utils.flatten([expToWasm(e) for e in args])+[WasmInstrCall(WasmId(p))]
         
-        # unariy operation ( negate a const)
+        # unariy operation (negate a const)
         case UnOp(op,arg):
             match op:
                 case USub():
@@ -138,47 +138,46 @@ def expToWasm(expr: exp) -> list[WasmInstr]:
                     return [WasmInstrConst('i32',0)]+expToWasm(arg)+[WasmInstrIntRelOp('i32', 'eq')]
 
         # binary operations -> left and right expr on stack, than do mathematic op on them
-        case BinOp(l,op,r):
+        case BinOp(l,op,right):
             match op:
                 case Is():
-                    # TODO
-                    pass
+                    return []
                 case Add():
-                    return expToWasm(l)+expToWasm(r)+[WasmInstrNumBinOp('i64', 'add')] 
+                    return expToWasm(l)+expToWasm(right)+[WasmInstrNumBinOp('i64', 'add')] 
                 case Sub():
-                    return expToWasm(l)+expToWasm(r)+[WasmInstrNumBinOp('i64', 'sub')] 
+                    return expToWasm(l)+expToWasm(right)+[WasmInstrNumBinOp('i64', 'sub')] 
                 case Mul():
-                    return expToWasm(l)+expToWasm(r)+[WasmInstrNumBinOp('i64', 'mul')] 
+                    return expToWasm(l)+expToWasm(right)+[WasmInstrNumBinOp('i64', 'mul')] 
                 case And():
-                    return expToWasm(l) + [WasmInstrIf("i32", expToWasm(r), [WasmInstrConst('i32', 0)])]
+                    return expToWasm(l) + [WasmInstrIf("i32", expToWasm(right), [WasmInstrConst('i32', 0)])]
                 case Or(): 
-                    return expToWasm(l) + [WasmInstrIf("i32", [WasmInstrConst('i32', 1)], expToWasm(r))]
+                    return expToWasm(l) + [WasmInstrIf("i32", [WasmInstrConst('i32', 1)], expToWasm(right))]
                 case Less():
-                    return expToWasm(l)+expToWasm(r)+[WasmInstrIntRelOp('i64', 'lt_s')] 
+                    return expToWasm(l)+expToWasm(right)+[WasmInstrIntRelOp('i64', 'lt_s')] 
                 case LessEq():
-                    return expToWasm(l)+expToWasm(r)+[WasmInstrIntRelOp('i64', 'le_s')]
+                    return expToWasm(l)+expToWasm(right)+[WasmInstrIntRelOp('i64', 'le_s')]
                 case Greater():
-                    return expToWasm(l)+expToWasm(r)+[WasmInstrIntRelOp('i64', 'gt_s')]
+                    return expToWasm(l)+expToWasm(right)+[WasmInstrIntRelOp('i64', 'gt_s')]
                 case GreaterEq():
-                    return expToWasm(l)+expToWasm(r)+[WasmInstrIntRelOp('i64', 'ge_s')]
+                    return expToWasm(l)+expToWasm(right)+[WasmInstrIntRelOp('i64', 'ge_s')]
                 case Eq():
                     match tyOfExp(l.ty):
                         case Array():
                             # TODO
-                            pass
+                            return []
                         case Int():
-                            return expToWasm(l)+expToWasm(r)+[WasmInstrIntRelOp('i64', 'eq')]
+                            return expToWasm(l)+expToWasm(right)+[WasmInstrIntRelOp('i64', 'eq')]
                         case Bool():
-                            return expToWasm(l)+expToWasm(r)+[WasmInstrIntRelOp('i32', 'eq')]
+                            return expToWasm(l)+expToWasm(right)+[WasmInstrIntRelOp('i32', 'eq')]
                 case NotEq():
                     match tyOfExp(l.ty):
                         case Array():
                             # TODO
-                            pass
+                            return []
                         case Int():
-                            return expToWasm(l)+expToWasm(r)+[WasmInstrIntRelOp('i64', 'ne')]
+                            return expToWasm(l)+expToWasm(right)+[WasmInstrIntRelOp('i64', 'ne')]
                         case Bool():
-                            return expToWasm(l)+expToWasm(r)+[WasmInstrIntRelOp('i32', 'ne')]
+                            return expToWasm(l)+expToWasm(right)+[WasmInstrIntRelOp('i32', 'ne')]
         
 
 
@@ -187,7 +186,7 @@ def compileStmts(stmts: list[stmt]) -> list[WasmInstr]:
 
 def compileInitArray(lenExp: atomExp, elemTy: ty, cfg: CompilerConfig) -> list[WasmInstr]:
     '''Generates code to initialize an array without initializing the elements.'''
-    # TODO  fix error type car is partially unknown
+    # TODO
     le = expToWasm(AtomExp(lenExp))[0]
     match le:
         case WasmInstrVarLocal(_,id):
@@ -201,12 +200,23 @@ def compileInitArray(lenExp: atomExp, elemTy: ty, cfg: CompilerConfig) -> list[W
     match elemTy:
         case Array():
             m = 3
-        case Int() | Bool():
+            s = 4
+        case Int():
             m = 1
+            s = 8
+        case Bool():
+            m = 1
+            s = 4
     res: list[WasmInstr] = []
     res += [WasmInstrConvOp('i32.wrap_i64'), WasmInstrConst('i32', 4)]
     res += [WasmInstrNumBinOp('i32','shl'), WasmInstrConst('i32', m), WasmInstrNumBinOp('i32','xor')]
-    res += []
+    res += [WasmInstrVarLocal('get', WasmId('$@free_ptr')), WasmInstrMem('i32','store')]
+    res += [WasmInstrVarLocal('get', WasmId('$@free_ptr'))]
+    # instructions for length
+    res += [WasmInstrConvOp('i32.wrap_i64'), WasmInstrConst('i32', s)]
+    res += [WasmInstrNumBinOp('i32','mul'), WasmInstrConst('i32',4)]
+    res += [WasmInstrNumBinOp('i32','add'), WasmInstrVarLocal('get', WasmId('$@free_ptr'))]
+    res += [WasmInstrNumBinOp('i32','add'), WasmInstrVarLocal('set', WasmId('$@free_ptr'))]
     return res
 
 def arrayLenInstrs() -> list[WasmInstr]:
@@ -222,14 +232,14 @@ def arrayOffsetInstrs(arrayExp: atomExp, indexExp: atomExp) -> list[WasmInstr]:
     return expToWasm(AtomExp(arrayExp)) + expToWasm(AtomExp(indexExp)) + [WasmInstrNumBinOp('i32', 'add')]
 
 def compileModule(m: plainAst.mod, cfg: CompilerConfig) -> WasmModule:
-    # TODO: fix stmts
     # Type check the module
     loc_vars = list(array_tychecker.tycheckModule(m).items())
     # Generate the Wasm module
     wasm_imports = wasmImports(cfg.maxMemSize)
     wasm_exports = [WasmExport('main', WasmExportFunc(WasmId('$main')))]
     locals = [(WasmId('$' + x[0].name), mapTyToWasmValType(x[1].ty)) for x in loc_vars] 
-    funcs = [WasmFunc(WasmId('$main'), [], None, locals, compileStmts(m.stmts))]
+    trans_stmts = array_transform.transStmts(m.stmts,array_transform.Ctx())
+    funcs = [WasmFunc(WasmId('$main'), [], None, locals, compileStmts(trans_stmts))]
     return WasmModule(wasm_imports, wasm_exports, globals=[], data=[], funcTable=WasmFuncTable([WasmId('$main')]), funcs=funcs) 
 
 def mapTyToWasmValType(t: ty)->WasmValtype:
