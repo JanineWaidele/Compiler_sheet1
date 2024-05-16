@@ -17,7 +17,7 @@ DEFAULT_OUTPUT = 'out.wasm'
 
 def parseArgs():
     parser = argparse.ArgumentParser(description=f'Run the compiler or interpreter for some language')
-    parser.add_argument('--lang', choices=['simple', 'var', 'loop', 'array', 'fun'],
+    parser.add_argument('--lang', choices=['simple', 'var', 'loop', 'array', 'fun', 'tinyJson'],
                         help='The language (guessed from path of input file if not given)')
     parser.add_argument('--level', help='The loglevel (debug, info, warn)')
     subparsers = parser.add_subparsers(help='Commands', dest='cmd')
@@ -141,11 +141,14 @@ def main():
             if x.startswith('lang_'):
                 lang = x[len('lang_'):]
         if lang is None:
-            utils.abort(f'Language not given with --lang and input file does not allow guessing '\
-                'the language.')
-    ast = importModule(lang, 'ast')
+            if args.input.endswith('.json'):
+                lang = 'tinyJson'
+            else:
+                utils.abort(f'Language not given with --lang and input file does not allow guessing '\
+                    'the language.')
     match args.cmd:
         case "compile" | "run":
+            ast = importModule(lang, 'ast')
             if args.cmd == "run" and not args.output.endswith('.wasm'):
                 utils.abort("For mode=run, output file must be a .wasm file")
             compilerMod = importModule(lang, 'compile')
@@ -156,6 +159,7 @@ def main():
             if args.cmd == "run":
                 runWasm(args.run_wasm, args.output)
         case "interp":
+            ast = importModule(lang, 'ast')
             interpMod = importModule(lang, 'interp')
             interpFun = getFun(interpMod, 'interpModule')
             interpArgs = genericInterp.Args(args.input)
@@ -167,7 +171,14 @@ def main():
                                                   args.alg, args.png, args.grammar)
             if lang == 'simple':
                 simple_parser.parse(parserArgs)
+            elif lang == 'tinyJson':
+                tinyJson_parser = utils.importModuleNotInStudent('parsers.tinyJson.tinyJson_parser')
+                f = args.input
+                x = tinyJson_parser.parse(utils.readTextFile(f))
+                print(f'Successfully parsed {f} as json.')
+                print(x)
             else:
+                ast = importModule(lang, 'ast')
                 parseMod = importModule(lang, 'parse')
                 parseFun = getFun(parseMod, 'parseModule')
                 genericParser.parseWithOwnParser(args.input, parserArgs, ast, parseFun)

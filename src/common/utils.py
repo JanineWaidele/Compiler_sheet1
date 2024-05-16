@@ -88,8 +88,7 @@ def importModuleNotInStudent(modName: str) -> Any:
         m = importlib.import_module(modName)
         return m
     except ImportError as e:
-        e.add_note(f'Could not import {modName}. Are in the student repo? '\
-                        'Then deactivate the test triggering this error.')
+        e.add_note(f'Could not import {modName}. Are in the student repo?')
         raise e
 
 def splitIf[T](l: list[T], pred: Callable[[T], bool],
