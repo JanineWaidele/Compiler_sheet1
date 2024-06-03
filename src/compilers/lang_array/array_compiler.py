@@ -13,16 +13,14 @@ def stmtToWasm(s: stmt) -> list[WasmInstr]:
     match s:
 
         case SubscriptAssign(l, i, r):
-            print('in subscript assign')
+
             # put instructions for the right-hand side, 
             # followed by a i64.store or i32.store after these instructions.
-            print(l.ty)
+
             match l.ty:
                 case Int():
-                    print('store i64')
                     st = [WasmInstrMem('i64', 'store')]
                 case Bool():
-                    print('store i32')
                     st = [WasmInstrMem('i32', 'store')]
                 case Array(aty):
                     match aty:
@@ -44,8 +42,6 @@ def stmtToWasm(s: stmt) -> list[WasmInstr]:
         # Stack:
         # assign to var: z.B. x = exp
         # expression: z.B. 2 + 5
-            print('in assign')
-            print(e)
             return expToWasm(e)+[WasmInstrVarLocal('set', WasmId('$'+i.name))]
 
         case IfStmt(cond, thn, els):
@@ -72,30 +68,37 @@ def expToWasm(expr: exp) -> list[WasmInstr]:
                 case Name(var, _):
                     return [WasmInstrVarLocal('get', WasmId('$'+var.name))]
 
-        case ArrayInitDyn(l_init, elemInit, _):
+        case ArrayInitDyn(l_init, elemInit, ty):
             # TODO
             res:List[WasmInstr] = []
-            l = 0
-            match l_init:
-                case IntConst(val,_):
-                    l = val
-                case BoolConst() | Name():
-                    l = 0
-            tmp_var = "tmp_i32"
-            match elemInit:
-                case Name(var,_):
-                    for _ in range(l):
-                        res += [WasmInstrVarLocal('tee', WasmId('$'+var.name)), WasmInstrVarLocal('get', WasmId('$'+var.name))]
-                case IntConst(val,_):
-                    for _ in range(l):
-                        res += [WasmInstrMem('i64', 'store')]
-                        res += expToWasm(AtomExp(elemInit))
-                case BoolConst(val,_):
-                    for _ in range(l):
-                        res += expToWasm(AtomExp(elemInit))
-                        #r += arrayOffsetInstrs()
-                        res += [WasmInstrConst('i32', 4), WasmInstrNumBinOp('i32', 'add')]
-                        res += [WasmInstrVarLocal('set', WasmId('$'+tmp_var))]
+            res += compileInitArray(l_init, tyOfExp(ty), CompilerConfig(1600, 6553600))
+
+            res += [WasmInstrVarLocal('tee', WasmId('$tmp_i32')), WasmInstrVarLocal('get', WasmId('$tmp_i32'))]
+            res += [WasmInstrConst('i32', 4), WasmInstrNumBinOp('i32', 'add')]
+            res += [WasmInstrVarLocal('set', WasmId('$tmp_i32'))]
+
+            # size of elems in bytes
+            match tyOfExp(ty):
+                case Array():
+                    s = 4
+                case Int():
+                    s = 8
+                case Bool():
+                    s = 4
+
+            # Loop
+            loop_instrs:List[WasmInstr] = []
+            loop_instrs += [WasmInstrVarLocal('get',WasmId('$tmp_i32')),WasmInstrVarGlobal('get',WasmId('$@free_ptr'))]
+            loop_instrs += [WasmInstrIntRelOp('i32','lt_u'),WasmInstrBranch(WasmId('$loop_exit'),False)]
+            loop_instrs += [WasmInstrVarLocal('get',WasmId('$tmp_i32'))]
+            loop_instrs += expToWasm(AtomExp(l_init))
+            loop_instrs += [WasmInstrMem('i64','store')]
+            loop_instrs += [WasmInstrVarLocal('get',WasmId('$tmp_i32')), WasmInstrConst('i32',s)]
+            loop_instrs += [WasmInstrNumBinOp('i32','add'),WasmInstrVarLocal('set',WasmId('$tmp_i32'))]
+            loop_instrs += [WasmInstrBranch(WasmId('$loop_start'),False)]
+            # put loop in block
+            res += [WasmInstrBlock(WasmId('$loop_exit'), None, [WasmInstrLoop(WasmId('$loop_start'),loop_instrs)])]
+            res += [WasmInstrConvOp('i64.extend_i32_s')]     
             return res
 
         case ArrayInitStatic(elemInit, ty):
@@ -125,7 +128,9 @@ def expToWasm(expr: exp) -> list[WasmInstr]:
         case Subscript(array, i, ty):
             # TODO
             # this function solves x[0]
-            print('in subscript')
+            # print('in subscript')
+            # print(array)
+            # print(i)
             offset = arrayOffsetInstrs(array, i)
             match ty:
                 case NotVoid():
@@ -314,11 +319,18 @@ def arrayOffsetInstrs(arrayExp: atomExp, indexExp: atomExp) -> list[WasmInstr]:
 
     # Compute the index offset
     offs += expToWasm(AtomExp(indexExp))
+
     match arrayExp.ty:
         case Int():
             s = 8
         case Bool():
             s = 4
+        case Array(atstat):
+            match atstat:
+                case Int():
+                    s = 8
+                case _:
+                    s = 4
         case _:
             s = 4
     offs += [WasmInstrConvOp('i32.wrap_i64'),WasmInstrConst('i32', s)] #
