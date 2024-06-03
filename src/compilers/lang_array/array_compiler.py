@@ -13,21 +13,29 @@ def stmtToWasm(s: stmt) -> list[WasmInstr]:
     match s:
 
         case SubscriptAssign(l, i, r):
-        # put instructions for the right-hand side, 
-        # followed by a i64.store or i32.store after these instructions.
+            print('in subscript assign')
+            # put instructions for the right-hand side, 
+            # followed by a i64.store or i32.store after these instructions.
+            print(l.ty)
             match l.ty:
-                case Array():
-                    # TODO
-                    st = []
-                    pass
                 case Int():
+                    print('store i64')
                     st = [WasmInstrMem('i64', 'store')]
                 case Bool():
-                    st = [WasmInstrConvOp('i64.extend_i32_s'),WasmInstrMem('i64', 'store')]
+                    print('store i32')
+                    st = [WasmInstrMem('i32', 'store')]
+                case Array(aty):
+                    match aty:
+                        case Int():
+                            st = [WasmInstrMem('i64', 'store')]
+                        case Bool():
+                            st = [WasmInstrMem('i32', 'store')]
+                        case _:
+                            st = [WasmInstrMem('i32', 'store')]
                 case _:
-                    st = []
+                    st = [WasmInstrMem('i32', 'store')]
             offs = arrayOffsetInstrs(l, i)
-            return expToWasm(r) + expToWasm(AtomExp(l)) + offs + st
+            return offs + expToWasm(r) + st
 
         case StmtExp(e):
             return expToWasm(e)
@@ -94,6 +102,7 @@ def expToWasm(expr: exp) -> list[WasmInstr]:
 
             r: List[WasmInstr] = []
             r += compileInitArray(IntConst(len(elemInit), Int()), tyOfExp(ty), CompilerConfig(1600, 6553600))
+            
             for e in elemInit:
                 # read & write local var
                 r += [WasmInstrVarLocal('tee', WasmId('$tmp_i32'))]
@@ -113,16 +122,30 @@ def expToWasm(expr: exp) -> list[WasmInstr]:
             r += [WasmInstrConvOp('i64.extend_i32_s')]
             return r
 
-        case Subscript(array, i, _):
+        case Subscript(array, i, ty):
             # TODO
+            # this function solves x[0]
             print('in subscript')
-            return arrayOffsetInstrs(array, i)
+            offset = arrayOffsetInstrs(array, i)
+            match ty:
+                case NotVoid():
+                    match ty.ty:
+                        case Bool():
+                            load_ty = WasmInstrMem('i32','load')
+                        case Int():
+                            load_ty = WasmInstrMem('i64','load')
+                        case _:
+                            load_ty = WasmInstrMem('i32','load')
+                case _:
+                    load_ty = WasmInstrMem('i32','load')
+            return offset + [load_ty]
 
         # call function with expressions
         case Call(n,args,t):
             p = '$'+n.name
             f = ''
             ty_t = tyOfExp(t)
+
             match ty_t:
                 case Array():
                     # TODO
@@ -138,6 +161,7 @@ def expToWasm(expr: exp) -> list[WasmInstr]:
                     p = '$input_'+f 
                 case _:
                     pass
+
             return utils.flatten([expToWasm(e) for e in args])+[WasmInstrCall(WasmId(p))]
         
         # unariy operation (negate a const)
@@ -155,7 +179,7 @@ def expToWasm(expr: exp) -> list[WasmInstr]:
                 
                 case Is():
                     # TODO: implement equality
-                    return []
+                    return expToWasm(l) +expToWasm(right) + [WasmInstrIntRelOp('i64','eq'),]
                 
                 case Add():
                     
@@ -267,7 +291,7 @@ def arrayLenInstrs() -> list[WasmInstr]:
     '''Generates code that expects the array address on top of stack and puts the length on top
     of stack.'''
     # TODO 
-    return [WasmInstrMem('i32', 'load'), WasmInstrConst('i32', 4), WasmInstrNumBinOp('i32','shr_u'), WasmInstrConvOp('i64.extend_i32_u')]
+    return [WasmInstrMem('i32', 'load'), WasmInstrConst('i32', 4), WasmInstrNumBinOp('i32','shr_u')]#, WasmInstrConvOp('i64.extend_i32_u')
 
 def arrayOffsetInstrs(arrayExp: atomExp, indexExp: atomExp) -> list[WasmInstr]:
     '''Returns instructions that places the memory offset for a certain array element on top of
@@ -297,10 +321,9 @@ def arrayOffsetInstrs(arrayExp: atomExp, indexExp: atomExp) -> list[WasmInstr]:
             s = 4
         case _:
             s = 4
-    offs += [WasmInstrConvOp('i32.wrap_i64'), WasmInstrConst('i32', s)]
+    offs += [WasmInstrConvOp('i32.wrap_i64'),WasmInstrConst('i32', s)] #
     offs += [WasmInstrNumBinOp('i32','mul'), WasmInstrConst('i32',4)]
-    offs += [WasmInstrNumBinOp('i32','add'),WasmInstrNumBinOp('i32','add'), WasmInstrConvOp('i64.extend_i32_s')]
-    # match 
+    offs += [WasmInstrNumBinOp('i32','add'),WasmInstrNumBinOp('i32','add')] #WasmInstrConvOp('i64.extend_i32_s')
 
     return offs
 
