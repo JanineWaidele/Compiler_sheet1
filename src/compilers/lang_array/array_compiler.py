@@ -70,7 +70,8 @@ def expToWasm(expr: exp) -> list[WasmInstr]:
         case ArrayInitDyn(l_init, elemInit, ty):
             # TODO
             res:List[WasmInstr] = []
-            res += compileInitArray(l_init, tyOfExp(ty), CompilerConfig(1600, 6553600))
+            
+            res += compileInitArray(l_init, expType(elemInit))
 
             res += [WasmInstrVarLocal('tee', WasmId('$tmp_i32')), WasmInstrVarLocal('get', WasmId('$tmp_i32'))]
             res += [WasmInstrConst('i32', 4), WasmInstrNumBinOp('i32', 'add')]
@@ -91,13 +92,12 @@ def expToWasm(expr: exp) -> list[WasmInstr]:
             loop_instrs += [WasmInstrBranch(WasmId('$loop_start'),False)]
             # put loop in block
             res += [WasmInstrBlock(WasmId('$loop_exit'), None, [WasmInstrLoop(WasmId('$loop_start'),loop_instrs)])]
-            res += [WasmInstrConvOp('i64.extend_i32_s')]     
             return res
 
         case ArrayInitStatic(elemInit, ty):
 
             r: List[WasmInstr] = []
-            r += compileInitArray(IntConst(len(elemInit)), expType(elemInit[0]), CompilerConfig(1600, 6553600))
+            r += compileInitArray(IntConst(len(elemInit)), expType(elemInit[0]))
 
             wvt = 'i32'
             s_ars = 4
@@ -131,6 +131,10 @@ def expToWasm(expr: exp) -> list[WasmInstr]:
 
         # call function with expressions
         case Call(n,args,ct):
+            # len
+            if n.name == 'len':
+                return expToWasm(args[0]) + arrayLenInstrs() + [WasmInstrConvOp('i64.extend_i32_u')]
+            # input int & print    
             p = '$'+n.name
             f = ''
             f_in = ''
@@ -225,7 +229,7 @@ def expToWasm(expr: exp) -> list[WasmInstr]:
 def compileStmts(stmts: list[stmt]) -> list[WasmInstr]:
     return utils.flatten([stmtToWasm(s) for s in stmts])
 
-def lengthCheck(lenExp: atomExp, cfg: CompilerConfig) -> list[WasmInstr]:
+def lengthCheck(lenExp: atomExp) -> list[WasmInstr]:
     # check that length is okay
     le = expToWasm(AtomExp(lenExp))[0]
     length = 0
@@ -238,8 +242,8 @@ def lengthCheck(lenExp: atomExp, cfg: CompilerConfig) -> list[WasmInstr]:
                     length = int(val)
         case _:
             pass
-
-    if (length > cfg.maxArraySize) or (length < 0):
+    global maxArraySize
+    if (length > maxArraySize) or (length < 0):
         return [WasmInstrTrap()] # unreachable
     else:
         return []
@@ -263,9 +267,11 @@ def computeHeader(lenExp: atomExp, elemTy: ty) -> list[WasmInstr]:
     restmp += [WasmInstrNumBinOp('i32','shl'), WasmInstrConst('i32', m), WasmInstrNumBinOp('i32','xor')]
     return restmp
 
-def movePtr(s_bytes: int)->list[WasmInstr]:
+def movePtr(s_bytes: int, len_instr: list[WasmInstr])->list[WasmInstr]:
     lwas: list[WasmInstr] = []
-    lwas += [WasmInstrVarGlobal('get', WasmId('$@free_ptr'))]#, WasmInstrConvOp('i32.wrap_i64')]
+    lwas += [WasmInstrVarGlobal('get', WasmId('$@free_ptr'))]#
+    lwas += len_instr
+    lwas += [WasmInstrConvOp('i32.wrap_i64')]
     # calc bit length sum for all elements
     lwas += [WasmInstrConst('i32', s_bytes), WasmInstrNumBinOp('i32', 'mul')]
     # add 4 bits needed for header
@@ -276,25 +282,29 @@ def movePtr(s_bytes: int)->list[WasmInstr]:
     lwas += [WasmInstrVarGlobal('set', WasmId('$@free_ptr'))]
     return lwas
 
-def compileInitArray(lenExp: atomExp, elemTy: ty, cfg: CompilerConfig) -> list[WasmInstr]:
+def compileInitArray(lenExp: atomExp, elemTy: ty) -> list[WasmInstr]:
     '''Generates code to initialize an array without initializing the elements.'''
     res: list[WasmInstr] = []
     # 1. length check
-    res += lengthCheck(lenExp, cfg)
+    res += lengthCheck(lenExp)
     # 2. Compute header value
     res += computeHeader(lenExp, elemTy)
     s = getByteSize(lenExp)
     # 3. Store header at $@free_ptr
-    res += [WasmInstrVarGlobal('get', WasmId('$@free_ptr')), WasmInstrMem('i32','store')]
+    res += [WasmInstrMem('i32','store')]
+    #res += [WasmInstrVarGlobal('get', WasmId('$@free_ptr')), WasmInstrMem('i32','store')]
     # 4. Move $@free_ptr and return array address
-    res += movePtr(s)
+    res += movePtr(s, expToWasm(AtomExp(lenExp)))
     return res
 
 def arrayLenInstrs() -> list[WasmInstr]:
     '''Generates code that expects the array address on top of stack and puts the length on top
     of stack.'''
     # TODO 
-    return [WasmInstrMem('i32', 'load'), WasmInstrConst('i32', 4), WasmInstrNumBinOp('i32','shr_u'),WasmInstrConvOp('i64.extend_i32_u')]#
+    len_instrs: list[WasmInstr] = []
+    len_instrs += [WasmInstrMem('i32', 'load'), WasmInstrConst('i32', 4)]
+    len_instrs += [WasmInstrNumBinOp('i32','shr_u')]#,WasmInstrConvOp('i64.extend_i32_u')
+    return len_instrs
 
 def arrayOffsetInstrs(arrayExp: atomExp, indexExp: atomExp) -> list[WasmInstr]:
     '''Returns instructions that places the memory offset for a certain array element on top of
@@ -315,6 +325,8 @@ def arrayOffsetInstrs(arrayExp: atomExp, indexExp: atomExp) -> list[WasmInstr]:
     return offs
 
 def compileModule(m: plainAst.mod, cfg: CompilerConfig) -> WasmModule:
+    global maxArraySize
+    maxArraySize = cfg.maxArraySize
     # Type check the module
     loc_vars = list(array_tychecker.tycheckModule(m).items())
     # Generate the Wasm module
