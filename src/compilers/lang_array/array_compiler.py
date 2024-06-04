@@ -63,7 +63,7 @@ def expToWasm(expr: exp) -> list[WasmInstr]:
                 case IntConst(val, _):
                     return [WasmInstrConst('i64', val)]
                 case BoolConst(val, _):
-                    return [WasmInstrConst('i32', val)]
+                    return [WasmInstrConst('i32', boolToInt32(val))]
                 case Name(var, _):
                     return [WasmInstrVarLocal('get', WasmId('$'+var.name))]
 
@@ -111,7 +111,7 @@ def expToWasm(expr: exp) -> list[WasmInstr]:
                     pass
 
             for i, e in enumerate(elemInit):
-                
+
                 # read & write local var
                 r += [WasmInstrVarLocal('tee', WasmId('$tmp_i32'))]
                 r += [WasmInstrVarLocal('get', WasmId('$tmp_i32'))]
