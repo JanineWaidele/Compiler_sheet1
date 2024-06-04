@@ -16,7 +16,6 @@ def stmtToWasm(s: stmt) -> list[WasmInstr]:
 
             # put instructions for the right-hand side, 
             # followed by a i64.store or i32.store after these instructions.
-
             match l.ty:
                 case Int():
                     st = [WasmInstrMem('i64', 'store')]
@@ -106,20 +105,24 @@ def expToWasm(expr: exp) -> list[WasmInstr]:
             r: List[WasmInstr] = []
             r += compileInitArray(IntConst(len(elemInit), Int()), tyOfExp(ty), CompilerConfig(1600, 6553600))
             
-            for e in elemInit:
+            for i, e in enumerate(elemInit):
+                wvt = 'i32'
+                s_ars = 4
+                match e.ty:
+                    case Int():
+                        wvt = 'i64' 
+                        s_ars = 8
+                    case _:
+                        pass
+                
                 # read & write local var
                 r += [WasmInstrVarLocal('tee', WasmId('$tmp_i32'))]
                 r += [WasmInstrVarLocal('get', WasmId('$tmp_i32'))]
                 # add offset
-                r += [WasmInstrConst('i32', 4), WasmInstrNumBinOp('i32','add')]
+                r += [WasmInstrConst('i32', 4 + (s_ars*(i))), WasmInstrNumBinOp('i32','add')]
                 # evaluate expr and store it
                 r += expToWasm(AtomExp(e))
-                wvt = 'i32'
-                match e.ty:
-                    case Int():
-                        wvt = 'i64' 
-                    case _:
-                        pass
+                
                 r += [WasmInstrMem(wvt, 'store')]
             
             r += [WasmInstrConvOp('i64.extend_i32_s')]
@@ -149,16 +152,21 @@ def expToWasm(expr: exp) -> list[WasmInstr]:
         case Call(n,args,t):
             p = '$'+n.name
             f = ''
+            #print(t)
             ty_t = tyOfExp(t)
-
+            if len(args) > 0:
+                ty_t = tyOfExp(args[0].ty)
             match ty_t:
                 case Array():
                     # TODO
+                    print('array')
                     pass
                 case Int():
                     f = 'i64'
+                    print('int')
                 case Bool():
                     f = 'i32'
+                    print('bool')
             match n.name:
                 case 'print':
                     p = '$print_'+f
