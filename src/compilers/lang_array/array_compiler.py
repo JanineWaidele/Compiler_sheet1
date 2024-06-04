@@ -77,13 +77,7 @@ def expToWasm(expr: exp) -> list[WasmInstr]:
             res += [WasmInstrVarLocal('set', WasmId('$tmp_i32'))]
 
             # size of elems in bytes
-            match tyOfExp(ty):
-                case Array():
-                    s = 4
-                case Int():
-                    s = 8
-                case Bool():
-                    s = 4
+            s = getByteSize(elemInit)
 
             # Loop
             loop_instrs:List[WasmInstr] = []
@@ -127,36 +121,24 @@ def expToWasm(expr: exp) -> list[WasmInstr]:
                 r += expToWasm(AtomExp(e))
                 
                 r += [WasmInstrMem(wvt, 'store')]
-            
-            #r += [WasmInstrConvOp('i64.extend_i32_s')] # TODO: pointer nicht casten
+
             return r
 
         case Subscript(array, i, ty):
             # TODO
             offset = arrayOffsetInstrs(array, i)
-            match ty:
-                case NotVoid():
-                    match ty.ty:
-                        case Bool():
-                            load_ty = WasmInstrMem('i32','load')
-                        case Int():
-                            load_ty = WasmInstrMem('i64','load')
-                        case _:
-                            load_ty = WasmInstrMem('i32','load')
-                case _:
-                    load_ty = WasmInstrMem('i32','load')
-            return offset + [load_ty]
+            return offset + [WasmInstrMem(mapTyToWasmValType(tyOfExp(ty)), 'load')]
 
         # call function with expressions
-        case Call(n,args,t):
-            
+        case Call(n,args,ct):
             p = '$'+n.name
             f = ''
             f_in = ''
-            ty_t = tyOfExp(t)
             if len(args) > 0:
-                ty_t = tyOfExp(args[0].ty)
-            match ty_t:
+                tyTomatch = tyOfExp(args[0].ty)
+            else:
+                tyTomatch = tyOfExp(ct)
+            match tyTomatch:#tyOfExp(args[0].ty):
                 case Array():
                     # TODO
                     pass
@@ -243,11 +225,8 @@ def expToWasm(expr: exp) -> list[WasmInstr]:
 def compileStmts(stmts: list[stmt]) -> list[WasmInstr]:
     return utils.flatten([stmtToWasm(s) for s in stmts])
 
-def compileInitArray(lenExp: atomExp, elemTy: ty, cfg: CompilerConfig) -> list[WasmInstr]:
-    '''Generates code to initialize an array without initializing the elements.'''
-    res: list[WasmInstr] = []
-
-    # 1. check that length is okay
+def lengthCheck(lenExp: atomExp, cfg: CompilerConfig) -> list[WasmInstr]:
+    # check that length is okay
     le = expToWasm(AtomExp(lenExp))[0]
     length = 0
     match le:
@@ -261,85 +240,77 @@ def compileInitArray(lenExp: atomExp, elemTy: ty, cfg: CompilerConfig) -> list[W
             pass
 
     if (length > cfg.maxArraySize) or (length < 0):
-        res += [WasmInstrTrap()] # unreachable
+        return [WasmInstrTrap()] # unreachable
     else:
+        return []
+    
+def computeHeader(lenExp: atomExp, elemTy: ty) -> list[WasmInstr]:
+    restmp: list[WasmInstr] = []
+    match elemTy:
+        case Array():
+            m = 3
+        case Int():
+            m = 1
+        case Bool():
+            m = 1
+    
+    # put length of array in storage on top of stack
+    restmp += [WasmInstrVarGlobal('get', WasmId('$@free_ptr'))]
+    restmp += expToWasm(AtomExp(lenExp))
 
-        # 2. Compute header value
-        match elemTy:
-            case Array():
-                m = 3
-                s = 4
-            case Int():
-                m = 1
-                s = 8
-            case Bool():
-                m = 1
-                s = 4
-        
-        # put length of array in storage on top of stack
-        res += [WasmInstrVarGlobal('get', WasmId('$@free_ptr'))]
-        res += expToWasm(AtomExp(lenExp))
+    # assumes length is on top of stack
+    restmp += [WasmInstrConvOp('i32.wrap_i64'), WasmInstrConst('i32', 4)] # convert length to i32 const
+    restmp += [WasmInstrNumBinOp('i32','shl'), WasmInstrConst('i32', m), WasmInstrNumBinOp('i32','xor')]
+    return restmp
 
-        # assumes length is on top of stack
-        res += [WasmInstrConvOp('i32.wrap_i64'), WasmInstrConst('i32', 4)] # convert length to i32 const
-        res += [WasmInstrNumBinOp('i32','shl'), WasmInstrConst('i32', m), WasmInstrNumBinOp('i32','xor')]
+def movePtr(s_bytes: int)->list[WasmInstr]:
+    lwas: list[WasmInstr] = []
+    lwas += [WasmInstrVarGlobal('get', WasmId('$@free_ptr'))]#, WasmInstrConvOp('i32.wrap_i64')]
+    # calc bit length sum for all elements
+    lwas += [WasmInstrConst('i32', s_bytes), WasmInstrNumBinOp('i32', 'mul')]
+    # add 4 bits needed for header
+    lwas += [WasmInstrConst('i32', 4), WasmInstrNumBinOp('i32', 'add')]
+    # add space needed by array to ptr and save it -> old ptr val on top of stack
+    lwas += [WasmInstrVarGlobal('get', WasmId('$@free_ptr'))]
+    lwas += [WasmInstrNumBinOp('i32', 'add')]
+    lwas += [WasmInstrVarGlobal('set', WasmId('$@free_ptr'))]
+    return lwas
 
-        # 3. Store header at $@free_ptr
-        res += [WasmInstrVarGlobal('get', WasmId('$@free_ptr')), WasmInstrMem('i32','store')]
-
-        # 4. Move $@free_ptr and return array address
-        res += [WasmInstrVarGlobal('get', WasmId('$@free_ptr'))]#, WasmInstrConvOp('i32.wrap_i64')]
-        # calc bit length sum for all elements
-        res += [WasmInstrConst('i32', s), WasmInstrNumBinOp('i32', 'mul')]
-        # add 4 bits needed for header
-        res += [WasmInstrConst('i32', 4), WasmInstrNumBinOp('i32', 'add')]
-        # add space needed by array to ptr and save it -> old ptr val on top of stack
-        res += [WasmInstrVarGlobal('get', WasmId('$@free_ptr'))]
-        res += [WasmInstrNumBinOp('i32', 'add')]
-        res += [WasmInstrVarGlobal('set', WasmId('$@free_ptr'))]
-
+def compileInitArray(lenExp: atomExp, elemTy: ty, cfg: CompilerConfig) -> list[WasmInstr]:
+    '''Generates code to initialize an array without initializing the elements.'''
+    res: list[WasmInstr] = []
+    # 1. length check
+    res += lengthCheck(lenExp, cfg)
+    # 2. Compute header value
+    res += computeHeader(lenExp, elemTy)
+    s = getByteSize(lenExp)
+    # 3. Store header at $@free_ptr
+    res += [WasmInstrVarGlobal('get', WasmId('$@free_ptr')), WasmInstrMem('i32','store')]
+    # 4. Move $@free_ptr and return array address
+    res += movePtr(s)
     return res
 
 def arrayLenInstrs() -> list[WasmInstr]:
     '''Generates code that expects the array address on top of stack and puts the length on top
     of stack.'''
     # TODO 
-    return [WasmInstrMem('i32', 'load'), WasmInstrConst('i32', 4), WasmInstrNumBinOp('i32','shr_u')]#, WasmInstrConvOp('i64.extend_i32_u')
+    return [WasmInstrMem('i32', 'load'), WasmInstrConst('i32', 4), WasmInstrNumBinOp('i32','shr_u'),WasmInstrConvOp('i64.extend_i32_u')]#
 
 def arrayOffsetInstrs(arrayExp: atomExp, indexExp: atomExp) -> list[WasmInstr]:
     '''Returns instructions that places the memory offset for a certain array element on top of
     stack.'''
-    # ArrayInstr: [WasmInstrVarLocal(op='get', id=WasmId(id='$x'))]
-    # IndexInstr: [WasmInstrConst(ty='i64', val=0)]
-    # i32.wrap_i64
-    # (i32.const S)
-    # i32.mul
-    # (i32.const 4)
-    # i32.add
-    # ;; now on top of stack: offset of the element
-    # i32.add
- 
     # Compute the base address of the array
     offs: List[WasmInstr] = []
-    ae = expToWasm(AtomExp(arrayExp))
-    offs += ae
-    #offs += [WasmInstrConvOp('i32.wrap_i64')]
-
+    offs += expToWasm(AtomExp(arrayExp))
+    
     # Compute the index offset
-    offs += expToWasm(AtomExp(indexExp))
+    aidx = expToWasm(AtomExp(indexExp))
+    offs += aidx
+    s = getByteSize(arrayExp)
 
-    match arrayExp.ty:
-        case Int():
-            s = 8
-        case Bool():
-            s = 4
-        case Array():
-            s = 4
-        case _:
-            s = 4
-    offs += [WasmInstrConvOp('i32.wrap_i64'),WasmInstrConst('i32', s)] #
-    offs += [WasmInstrNumBinOp('i32','mul'), WasmInstrConst('i32', 4)]
-    offs += [WasmInstrNumBinOp('i32','add'),WasmInstrNumBinOp('i32','add')] #WasmInstrConvOp('i64.extend_i32_s')
+    offs += [WasmInstrConvOp('i32.wrap_i64'),WasmInstrConst('i32', s)]
+    offs += [WasmInstrNumBinOp('i32','mul'),WasmInstrConst('i32', 4)]
+    offs += [WasmInstrNumBinOp('i32','add'),WasmInstrNumBinOp('i32','add')] 
 
     return offs
 
@@ -355,7 +326,6 @@ def compileModule(m: plainAst.mod, cfg: CompilerConfig) -> WasmModule:
 
     locals = [(WasmId('$' + x[0].name), mapTyToWasmValType(x[1].ty)) for x in loc_vars]+ [(WasmId('$tmp_i32'),'i32')]
     locals += [(WasmId('$' + f[0].name), mapTyToWasmValType(f[1])) for f in context.freshVars.items()]
-    print(locals)
     globals = [WasmGlobal(WasmId('$@free_ptr'),'i32',True,[WasmInstrConst('i32',100)])] 
     
     compiled_stmts = compileStmts(trans_stmts)
@@ -382,9 +352,7 @@ def tyOfExp(e: Optional[resultTy]) -> ty:
     match e:
         case NotVoid():
             return e.ty
-        case Void():
-            return Int()
-        case None:
+        case Void() | None:
             return Int()
         
 def expType(ex: exp | atomExp) -> ty:
@@ -393,8 +361,22 @@ def expType(ex: exp | atomExp) -> ty:
             return ex.ty
         case NotVoid(nvt):
             return nvt
-        case Void():
-            raise TypeError
-        case None:
+        case Void() | None:
             raise TypeError
 
+def getByteSize(arE: atomExp):
+
+    match arE.ty:
+        case Int():
+            s = 8
+        case Bool():
+            s = 4
+        case Array(art):
+            match art:
+                case Int():
+                    s = 8
+                case _:
+                    s = 4
+        case _:
+            s = 4
+    return s
