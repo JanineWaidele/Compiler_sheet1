@@ -138,7 +138,7 @@ def expToWasm(expr: exp) -> list[WasmInstr]:
                 tyTomatch = tyOfExp(args[0].ty)
             else:
                 tyTomatch = tyOfExp(ct)
-            match tyTomatch:#tyOfExp(args[0].ty):
+            match tyTomatch:
                 case Array():
                     # TODO
                     pass
@@ -173,7 +173,7 @@ def expToWasm(expr: exp) -> list[WasmInstr]:
                 
                 case Is():
                     # TODO: implement equality
-                    return expToWasm(l) +expToWasm(right) + [WasmInstrIntRelOp('i64','eq')]
+                    return expToWasm(l) +expToWasm(right) + [WasmInstrIntRelOp('i32','eq')]
                 
                 case Add():
                     
