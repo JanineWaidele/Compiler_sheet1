@@ -1,3 +1,6 @@
+"""
+A pretty printer for the MIPS AST.
+"""
 from assembly.mips_ast import *
 
 def prettyOp(o: op) -> str:

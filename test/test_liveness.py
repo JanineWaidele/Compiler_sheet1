@@ -1,4 +1,4 @@
-import assembly.types as asTypes
+import assembly.common as asTypes
 import common.genericCompiler as genCompiler
 import shell
 import common.utils as utils
@@ -6,16 +6,16 @@ import common.log as log
 import assembly.tacPretty as tacPretty
 import common.testsupport as testsupport
 import pytest
+import assembly.controlFlow as controlFlow
+from assembly.loopToTac import loopToTac
 
 pytestmark = pytest.mark.instructor
 
 def buildInterfGraph(args: genCompiler.Args) -> asTypes.InterfGraph:
     # We have to import these modules dynamically because they are not present in student code
-    controlFlow = utils.importModuleNotInStudent('compilers.assembly.controlFlow')
     liveness = utils.importModuleNotInStudent('compilers.assembly.liveness')
-    asCommon = utils.importModuleNotInStudent('compilers.assembly.common')
-    log.debug(f'Interference graph test, first compilin to TAC')
-    tacInstrs = asCommon.loopToTac(args)
+    log.debug(f'Interference graph test, first compiling to TAC')
+    tacInstrs = loopToTac(args)
     log.debug(f'TAC:\n{tacPretty.prettyInstrs(tacInstrs)}')
     log.debug(f'Building the control flow graph ...')
     ctrlFlowG = controlFlow.buildControlFlowGraph(tacInstrs)

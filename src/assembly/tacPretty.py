@@ -1,3 +1,6 @@
+"""
+A pretty printer for TAC.
+"""
 from assembly.tac_ast import *
 
 def prettyPrim(p: prim) -> str:

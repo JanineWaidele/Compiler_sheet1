@@ -187,7 +187,7 @@ Here is how to build the native extension functions for the [iwasm](https://gith
 
 ```
 $ cd wasm-support
-$ make native WAMR_ROOT_DIR=/PATH_TO_CHECKOUT/wasm-micro-runtime
+$ make native WAMR_ROOT_DIR=/PATH_TO_WARM_CHECKOUT
 ```
 
 ## Install pyright

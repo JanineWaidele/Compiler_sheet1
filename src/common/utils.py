@@ -2,6 +2,8 @@ import sys
 from typing import *
 import hashlib
 import importlib
+import os
+import stat
 
 def abort(msg: str) -> Never:
     sys.stderr.write(f'ERROR: {msg}\nAborting!')
@@ -107,3 +109,12 @@ def splitIf[T](l: list[T], pred: Callable[[T], bool],
                 i = i + 1
             return (l[:i], l[i:])
     return (l, [])
+
+def isExecutable(p: str):
+    try:
+        st = os.stat(p)
+        b = (st.st_mode & stat.S_IXUSR) or (st.st_mode & stat.S_IXGRP) or \
+            (st.st_mode & stat.S_IXOTH)
+        return b
+    except FileNotFoundError:
+        return False

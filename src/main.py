@@ -7,6 +7,8 @@ import common.utils as utils
 import common.log as log
 import common.constants as constants
 import parsers.lang_simple.simple_parser as simple_parser
+import assembly.compiler as tac_comp
+import assembly.tacInterp as tac_interp
 import importlib
 import shell
 import sys
@@ -114,7 +116,10 @@ def runWasm(runWasmCmd: str, file: str):
     print(delim)
     print(f'Running wasm file {file}')
     print(delim)
-    res = shell.run([runWasmCmd, file], onError='ignore')
+    cmd = [runWasmCmd, file]
+    if shell.isFile(runWasmCmd) and not utils.isExecutable(runWasmCmd):
+        cmd = ['bash'] + cmd
+    res = shell.run(cmd, onError='ignore')
     ecode = 0 if res.exitcode == 0 else constants.RUN_ERROR_EXIT_CODE
     print(delim)
     print(f'Finished running wasm file {file}, exit code: {ecode}')
@@ -184,12 +189,10 @@ def main():
                 genericParser.parseWithOwnParser(args.input, parserArgs, ast, parseFun)
         case "tacInterp":
             compileArgs = genericCompiler.Args(args.input, '/tmp/dummy.wasm', 'wat2wasm', 1, 1)
-            interp = utils.importModuleNotInStudent('compilers.assembly.interp')
-            interp.interpFile(compileArgs, args.print_tac)
+            tac_interp.interpFile(compileArgs, args.print_tac)
         case "assembly":
             compileArgs = genericCompiler.Args(args.input, args.output, 'wat2wasm', 1, 1,
                                                args.max_registers)
-            tac_comp = utils.importModuleNotInStudent('compilers.assembly.compiler')
             tac_comp.compileFile(compileArgs)
         case _:
             utils.abort(f'Unknown command: {args.cmd}')

@@ -68,6 +68,7 @@ def genPytestIni(topDir: str, ex: Exercise):
         case 'array': includeTests.append('test_compiler[array')
         case 'fun': includeTests.append('test_compiler[fun')
         case 'parser': includeTests.extend(['test_varParser', 'test_tinyJson'])
+        case 'assembly': includeTests.extend(['test_graphColoring', 'test_liveness', 'test_assembly'])
         case _:
             abort(f"Don't know how to generate pytest.ini for exercise kind {ex}")
     incExpr = ' or '.join(includeTests)

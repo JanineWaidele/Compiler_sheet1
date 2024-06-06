@@ -1,3 +1,8 @@
+"""
+This module defines common types, class, and constaints for the translation
+from web assembly to MIPS assembly.
+"""
+
 from typing import *
 from dataclasses import dataclass
 import assembly.tac_ast as tac
@@ -50,4 +55,4 @@ class RegisterAllocMap(RegisterMap):
         else:
             return tacSpill.Ident(f'$s{i}')
 
-# type RegisterMap = dict[tac.ident, int]
+MAX_REGISTERS = 8
