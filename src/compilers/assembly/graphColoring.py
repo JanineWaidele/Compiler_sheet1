@@ -10,9 +10,10 @@ def chooseColor(x: tac.ident, forbidden: dict[tac.ident, set[int]]) -> int:
     # 3. Find the lowest color c not in {COL[v]|v∈adj(u)}.
     if x in forbidden.keys():
         forb_x = forbidden[x]
-        for ic in range(max(forb_x)):
+        for ic in range(MAX_REGISTERS):
             if ic not in forb_x:
                 return ic
+        raise IndexError("Not enough registers")
     return 0
 
 def colorInterfGraph(g: InterfGraph, secondaryOrder: dict[tac.ident, int]={},
@@ -29,8 +30,8 @@ def colorInterfGraph(g: InterfGraph, secondaryOrder: dict[tac.ident, int]={},
     log.debug(f"Coloring interference graph with maxRegs={maxRegs}")
     colors: dict[tac.ident, int] = {}
     forbidden: dict[tac.ident, set[int]] = {}
-    log.debug(f"forb: {forbidden}")
-    q = PrioQueue(secondaryOrder)
+    # TODO: why q not needed?
+    #q = PrioQueue(secondaryOrder)
     # 1. set W to to the set of all vertices of g
     W: list[tac.ident] = list(g.vertices)
     # 2. Pick u from W with the largest set forbidden(u) (break ties randomly).
@@ -46,6 +47,5 @@ def colorInterfGraph(g: InterfGraph, secondaryOrder: dict[tac.ident, int]={},
     for vert in W:
         colors[vert] = chooseColor(vert,forbidden)
     log.debug(f"colors: {colors}")
-    #raise ValueError('implement me')
     m = RegisterAllocMap(colors, maxRegs)
     return m
