@@ -8,7 +8,6 @@ def instrDef(instr: tac.instr) -> set[tac.ident]:
     """
     Returns the set of identifiers defined by some instrucution.
     """
-    # TODO InputInt Call
     defSet: set[tac.ident] = set()
     match instr:
         case Assign(idn,_):
@@ -130,8 +129,7 @@ class InterfGraphBuilder:
             out: Set[tac.ident] = set()
             for c in g.succs(b_idx):
                 out = out.union(IN[c])
-            self.__liveStart(bb, out)
-            IN[b_idx] = out
+            IN[b_idx] = self.__liveStart(bb, out)
             
 
     def __addEdgesForInstr(self, instrId: InstrId, instr: tac.instr, interfG: InterfGraph):
@@ -143,12 +141,16 @@ class InterfGraphBuilder:
         "Computing the interference graph" (slide 50) here.
         """
         dSet = instrDef(instr)
+        # vars live after k
+        Lafterk = self.after[instrId]
+        log.debug(f"instr: {instr}")
+        log.debug(f"Lafterk: {Lafterk}")
+        log.debug(f"dSet: {dSet}")
         # (x elem defSet)
         for x in dSet:
-            # vars live after k
-            Lafterk = self.after[instrId]
             # (y elem Lafterk)
             for y in Lafterk:
+                #log.debug(f"x: {x} and y: {y}")
                 # (x != y)
                 if (x != y):
                     # all conditions True -> add edge
@@ -167,14 +169,12 @@ class InterfGraphBuilder:
         """
         # step 1
         self.__liveness(g) # fill sets before and after
-        log.debug(f"self after: {self.after}")
-        log.debug(f"self before: {self.before}")
         # step 2
         interG: InterfGraph = Graph('undirected')
         # step 3
         for entry in g.values:
             indx = 0
-            for inst in entry.instrs:
+            for inst in reversed(entry.instrs):
                 # add vertices for instr
                 useSet = instrUse(inst)
                 for u in useSet:
