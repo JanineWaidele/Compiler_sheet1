@@ -7,29 +7,64 @@ import assembly.tacInterp as tacInterp
 from assembly.mipsHelper import *
 from common.compilerSupport import *
 
-def primToMips(pri: tacSpill.Prim) -> list[mips.instr]:
-    prim_list: list[mips.instr] = []
+def primToMips(pri: tacSpill.Prim) -> mips.instr:
     match pri.p:
         case Name(n):
-            prim_list += [mips.Label(n.name)]
-            return prim_list
+            return mips.Label(n.name)
         case Const(i):
-            prim_list += [mips.LoadI()]
+            return mips.LoadI(mips.Reg('tmp_reg'), mips.Imm(i))
+        
+def getRegFromPrim(mi: mips.instr)->mips.Reg:
+    match mi:
+        case mips.Label(lstr):
+            return mips.Reg(lstr)
+        case mips.LoadI(t,_):
+            return t
+        case _:
+            return mips.Reg('tmp_reg')
+
+def getNameFromPrim(pri: tacSpill.Prim)->str:
+    match pri.p:
+        case Const():
+            return ""
+        case Name(nstr):
+            return nstr.name
+
 
 def assignToMips(i: tacSpill.Assign) -> list[mips.instr]:
     # Assign: ident, exp
     # mips.instr: Op | OpI | LoadWord | LoadI | LoadA | StoreWord | BranchNeqZero | Branch | Move | Syscall | Label
     mips_list: list[mips.instr] = []
     match i.left:
-        case Prim():
-            pass
-        case BinOp(l,o,r):
-            match o:
-                case Op('add'):
-                    mips_list += [mips.Op(mips.AddI(), assignToMips(l), assignToMips(r))]
+        case Prim(pr):
+            match pr:
+                case Const(ci):
+                    #return [mips.StoreWord(mips.Reg(i.var.name), mips.Imm(ci), mips.Reg(i.var.name))]
+                    return [mips.LoadI(mips.Reg(i.var.name),mips.Imm(ci))]
+                case Name(vn):
+                    # 1: print int
+                    # 5: read int
+                    mips_list = [mips.LoadI(mips.Reg(vn.name),mips.Imm(5))]
+                    mips_list += [mips.Syscall(), mips.Move(mips.Reg(vn.name), mips.Reg(i.var.name))]
                     return mips_list
-                    match l.var:
-                        case Ident(n):
-                            mips.Op(mips.Add(),mips.Reg(i.var.name),mips.Reg(n),mips.Reg(r.var.name))
+
+        case BinOp(l,o,r):
+            match o.name:
+                case 'ADD':
+                    r_m: mips.instr = primToMips(tacSpill.Prim(l))
+                    l_m: mips.instr = primToMips(tacSpill.Prim(r))
+                    match r_m:
+                        case mips.LoadI(_,val):
+                            mips_list += [mips.OpI(mips.AddI(), mips.Reg(i.var.name), getRegFromPrim(l_m), mips.Imm(val.value))]
+                            return mips_list
+                        case mips.Label(l)| mips.LoadA(_,l):
+                            mips_list += [mips.Op(mips.Add(), mips.Reg(i.var.name), getRegFromPrim(l_m), getRegFromPrim(r_m))]
+                            return mips_list
+                        # case mips.Syscall():
+                        #     pass
                         case _:
-                            pass
+                            pass   
+                    return mips_list 
+                case _:
+                    return mips_list
+    
