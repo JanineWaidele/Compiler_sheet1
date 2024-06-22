@@ -50,22 +50,30 @@ def assignToMips(i: tacSpill.Assign) -> list[mips.instr]:
 
         case BinOp(l,o,r):
             match o.name:
-                case 'ADD' | 'SUB':
+                case 'ADD' | 'SUB' | 'MUL':
                     r_m: mips.instr = primToMips(tacSpill.Prim(l))
                     l_m: mips.instr = primToMips(tacSpill.Prim(r))
                     match r_m:
                         # constants
                         case mips.LoadI(_,val):
-                            mips_list = [mips.OpI(mips.AddI(), mips.Reg(i.var.name), getRegFromPrim(l_m), mips.Imm(val.value))]
-                            
+                            # this works partially
+                            match l_m:
+                                case mips.LoadI(_,val2):
+                                    mips_list = [primToMips(tacSpill.Prim(tacSpill.Const(val.value+val2.value)))]
+                                case mips.Label(_):
+                                    mips_list = [mips.OpI(mips.AddI(), mips.Reg(i.var.name), getRegFromPrim(l_m), mips.Imm(val.value))]
+                                case _:
+                                    mips_list = []
                             return mips_list
                         # labels/input_int
-                        case mips.Label(l):
+                        case mips.Label(_):
                             if o.name == 'ADD':
-                                # this works most of the thime
+                                # this works partially
                                 mips_list = [mips.Op(mips.Add(), mips.Reg(i.var.name), getRegFromPrim(l_m), getRegFromPrim(r_m))]
-                            else:
+                            elif o.name == 'SUB':
                                 mips_list = [mips.Op(mips.Sub(),mips.Reg(i.var.name), getRegFromPrim(l_m), getRegFromPrim(r_m))]
+                            elif o.name == 'MUL':
+                                mips_list = [mips.Op(mips.Mul(),mips.Reg(i.var.name), getRegFromPrim(l_m), getRegFromPrim(r_m))]
                             return mips_list
                         case mips.Syscall():
                             print(r_m)
