@@ -21,12 +21,14 @@ def getRegFromPrim(mi: mips.instr)->mips.Reg:
         case mips.LoadI(t,_):
             return t
         case _:
+            # t0 is correct
             return mips.Reg('$t0')
 
 def getNameFromPrim(pri: tacSpill.Prim)->str:
     match pri.p:
         case Const():
-            return "$s1"
+             # t0 is correct
+            return "$t0"
         case Name(nstr):
             return nstr.name
 
@@ -38,11 +40,12 @@ def assignToMips(i: tacSpill.Assign) -> list[mips.instr]:
         case Prim(pr):
             match pr:
                 case Const(ci):
-                    return [mips.LoadI(mips.Reg('$s1'),mips.Imm(ci))]
+                    # t0 is correct
+                    return [mips.LoadI(mips.Reg('$t0'),mips.Imm(ci))]
                 case Name(_):
                     # 1: print int
                     # 5: read int
-                    mips_list = [mips.LoadI(mips.Reg('$v0'),mips.Imm(5))]#, mips.Syscall(),mips.Move(mips.Reg('$s0'),mips.Reg('$v0'))]
+                    mips_list = [mips.LoadI(mips.Reg('$v0'),mips.Imm(5))]
                     return mips_list
 
         case BinOp(l,o,r):
@@ -59,9 +62,8 @@ def assignToMips(i: tacSpill.Assign) -> list[mips.instr]:
                         # labels/input_int
                         case mips.Label(l):
                             if o.name == 'ADD':
-                                # this works sometimes
+                                # this works most of the thime
                                 mips_list = [mips.Op(mips.Add(), mips.Reg(i.var.name), getRegFromPrim(l_m), getRegFromPrim(r_m))]
-                                print(mips_list)
                             else:
                                 mips_list = [mips.Op(mips.Sub(),mips.Reg(i.var.name), getRegFromPrim(l_m), getRegFromPrim(r_m))]
                             return mips_list
