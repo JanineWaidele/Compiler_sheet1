@@ -12,7 +12,7 @@ def primToMips(pri: tacSpill.Prim) -> mips.instr:
         case Name(n):
             return mips.Label(n.name)
         case Const(i):
-            return mips.LoadI(mips.Reg('tmp_reg'), mips.Imm(i))
+            return mips.LoadI(mips.Reg('$t0'), mips.Imm(i))
         
 def getRegFromPrim(mi: mips.instr)->mips.Reg:
     match mi:
@@ -21,30 +21,28 @@ def getRegFromPrim(mi: mips.instr)->mips.Reg:
         case mips.LoadI(t,_):
             return t
         case _:
-            return mips.Reg('tmp_reg')
+            return mips.Reg('$t0')
 
 def getNameFromPrim(pri: tacSpill.Prim)->str:
     match pri.p:
         case Const():
-            return "tmp_const"
+            return "$s1"
         case Name(nstr):
             return nstr.name
 
 
 def assignToMips(i: tacSpill.Assign) -> list[mips.instr]:
-    # Assign: ident, exp
-    # mips.instr: Op | OpI | LoadWord | LoadI | LoadA | StoreWord | BranchNeqZero | Branch | Move | Syscall | Label
+
     mips_list: list[mips.instr] = []
     match i.left:
         case Prim(pr):
             match pr:
                 case Const(ci):
-                    print(f"i_const: {i}")
-                    return [mips.LoadI(mips.Reg('$s1'),mips.Imm(ci))]#,mips.Syscall(),mips.Move(mips.Reg('$s1'),mips.Reg(i.var.name))]
-                case Name(vn):
+                    return [mips.LoadI(mips.Reg('$s1'),mips.Imm(ci))]
+                case Name(_):
                     # 1: print int
                     # 5: read int
-                    mips_list = [mips.LoadI(mips.Reg('$v0'),mips.Imm(5))]
+                    mips_list = [mips.LoadI(mips.Reg('$v0'),mips.Imm(5))]#, mips.Syscall(),mips.Move(mips.Reg('$s0'),mips.Reg('$v0'))]
                     return mips_list
 
         case BinOp(l,o,r):
@@ -56,13 +54,16 @@ def assignToMips(i: tacSpill.Assign) -> list[mips.instr]:
                         # constants
                         case mips.LoadI(_,val):
                             mips_list = [mips.OpI(mips.AddI(), mips.Reg(i.var.name), getRegFromPrim(l_m), mips.Imm(val.value))]
+                            
                             return mips_list
                         # labels/input_int
-                        case mips.Label(l)| mips.LoadA(_,l):
+                        case mips.Label(l):
                             if o.name == 'ADD':
+                                # this works sometimes
                                 mips_list = [mips.Op(mips.Add(), mips.Reg(i.var.name), getRegFromPrim(l_m), getRegFromPrim(r_m))]
+                                print(mips_list)
                             else:
-                                mips_list = [mips.Op(mips.Sub(), mips.Reg(i.var.name), getRegFromPrim(l_m), getRegFromPrim(r_m))]
+                                mips_list = [mips.Op(mips.Sub(),mips.Reg(i.var.name), getRegFromPrim(l_m), getRegFromPrim(r_m))]
                             return mips_list
                         case mips.Syscall():
                             print(r_m)
