@@ -33,16 +33,18 @@ def getNameFromPrim(pri: tacSpill.Prim)->str:
 
 
 def assignToMips(i: tacSpill.Assign) -> list[mips.instr]:
-    
+    #print(i)
     mips_list: list[mips.instr] = []
     match i.left:
         case tacSpill.Prim(pr):
             match pr:
                 case tacSpill.Const(ci):
+                    #print([mips.LoadI(mips.Reg('$t0'),mips.Imm(ci))])
                     return [mips.LoadI(mips.Reg('$t0'),mips.Imm(ci))]
                 case tacSpill.Name(_):
                     # 5: read int
                     mips_list = [mips.LoadI(mips.Reg('$v0'),mips.Imm(5))]
+                    #print(mips_list)
                     return mips_list
 
         case tacSpill.BinOp(l,o,r):
@@ -59,6 +61,7 @@ def assignToMips(i: tacSpill.Assign) -> list[mips.instr]:
                             elif o.name == 'SUB':
                                 mips_list += [primToMips(tacSpill.Prim(tacSpill.Const(val.value-val2.value)))]
                             elif o.name == 'MUL':
+                                #print('mul const const')
                                 mips_list += [primToMips(tacSpill.Prim(tacSpill.Const(val.value*val2.value)))]
                         # left exp is Label
                         case mips.Label(_):
@@ -67,10 +70,15 @@ def assignToMips(i: tacSpill.Assign) -> list[mips.instr]:
                             elif o.name == 'SUB':
                                 mips_list += [mips.LoadI(mips.Reg('$t3'), r_m.value)]
                                 mips_list += [mips.Op(mips.Sub(), mips.Reg(i.var.name), mips.Reg('$t3'), mips.Reg(r_m.target.name))]
+                            elif o.name == 'MUL':
+                                #print('mul lab const')
+                                mips_list += [mips.LoadI(mips.Reg('$t3'), r_m.value)]
+                                mips_list += [mips.Op(mips.Mul(), mips.Reg(i.var.name), mips.Reg('$t3'), mips.Reg(r_m.target.name))]
                             elif o.name == 'Less':
                                 mips_list += [mips.OpI(mips.LessI(), mips.Reg(i.var.name), getRegFromPrim(l_m), mips.Imm(val.value))]
                         case _:
                             mips_list = []
+                    #print(mips_list)
                     return mips_list
                 
                 # right exp is Label
@@ -84,18 +92,28 @@ def assignToMips(i: tacSpill.Assign) -> list[mips.instr]:
                             elif o.name == 'SUB':
                                 mips_list += [mips.LoadI(mips.Reg('$t3'), val3)]
                                 mips_list += [mips.Op(mips.Sub(), mips.Reg(i.var.name), mips.Reg('$t3'), mips.Reg(r_m.label))]
+                            elif o.name == 'MUL':
+                                #print('mul lab const')
+                                mips_list += [mips.LoadI(mips.Reg('$t3'), val3)]
+                                mips_list += [mips.Op(mips.Mul(), mips.Reg(i.var.name), mips.Reg('$t3'), mips.Reg(r_m.label))]
                             elif o.name == 'Less':
                                 mips_list += [mips.OpI(mips.LessI(), mips.Reg(i.var.name), getRegFromPrim(l_m), mips.Imm(val3.value))]
                         # left exp is Label
                         case mips.Label():
                             if o.name == 'SUB':
                                 mips_list += [mips.Op(mips.Sub(), mips.Reg(i.var.name), mips.Reg(l_m.label), mips.Reg(r_m.label))]
-                            mips_list += [mips.Op(lo,mips.Reg(i.var.name), getRegFromPrim(l_m), getRegFromPrim(r_m))]
+                            elif o.name == 'MUL':
+                                #print('mul lab lab')
+                                mips_list += [mips.Op(mips.Mul(), mips.Reg(i.var.name), mips.Reg(l_m.label), mips.Reg(r_m.label))]
+                            else:
+                                mips_list += [mips.Op(lo,mips.Reg(i.var.name), getRegFromPrim(l_m), getRegFromPrim(r_m))]
                         case _:
                             pass
+                    #print(mips_list)
                     return mips_list
                 case _:
                     pass   
+            #print(mips_list)
             return mips_list 
     
 def getOpFromName(op_s: str)->mips.op:
