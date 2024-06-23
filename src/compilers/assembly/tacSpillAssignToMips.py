@@ -65,8 +65,9 @@ def assignToMips(i: tacSpill.Assign) -> list[mips.instr]:
                             if o.name == 'ADD':
                                 mips_list = [mips.OpI(mips.AddI(), mips.Reg(i.var.name), getRegFromPrim(l_m), mips.Imm(val.value))]
                             elif o.name == 'SUB':
-                                # TODO: doesnt work right
-                                mips_list = [mips.Op(mips.Sub(), mips.Reg(i.var.name), mips.Reg('$t3'), mips.Reg(r_m.target.name))]
+                                # TODO: Usub doesn't work yet
+                                mips_list = [mips.LoadI(mips.Reg('$t3'), r_m.value)]
+                                mips_list += [mips.Op(mips.Sub(), mips.Reg(i.var.name), mips.Reg('$t3'), mips.Reg(r_m.target.name))]
                             elif o.name == 'Less':
                                 mips_list = [mips.OpI(mips.LessI(), mips.Reg(i.var.name), getRegFromPrim(l_m), mips.Imm(val.value))]
                         case _:
