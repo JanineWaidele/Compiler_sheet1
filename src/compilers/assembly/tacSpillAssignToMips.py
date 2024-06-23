@@ -33,7 +33,7 @@ def getNameFromPrim(pri: tacSpill.Prim)->str:
 
 
 def assignToMips(i: tacSpill.Assign) -> list[mips.instr]:
-
+    
     mips_list: list[mips.instr] = []
     match i.left:
         case tacSpill.Prim(pr):
@@ -55,43 +55,44 @@ def assignToMips(i: tacSpill.Assign) -> list[mips.instr]:
                         # left exp is Constant
                         case mips.LoadI(_,val2):
                             if o.name == 'ADD':
-                                mips_list = [primToMips(tacSpill.Prim(tacSpill.Const(val.value+val2.value)))]
+                                mips_list += [primToMips(tacSpill.Prim(tacSpill.Const(val.value+val2.value)))]
                             elif o.name == 'SUB':
-                                mips_list = [primToMips(tacSpill.Prim(tacSpill.Const(val2.value-val.value)))]
+                                mips_list += [primToMips(tacSpill.Prim(tacSpill.Const(val.value-val2.value)))]
                             elif o.name == 'MUL':
-                                mips_list = [primToMips(tacSpill.Prim(tacSpill.Const(val.value*val2.value)))]
+                                mips_list += [primToMips(tacSpill.Prim(tacSpill.Const(val.value*val2.value)))]
                         # left exp is Label
                         case mips.Label(_):
                             if o.name == 'ADD':
-                                mips_list = [mips.OpI(mips.AddI(), mips.Reg(i.var.name), getRegFromPrim(l_m), mips.Imm(val.value))]
+                                mips_list += [mips.OpI(mips.AddI(), mips.Reg(i.var.name), getRegFromPrim(l_m), mips.Imm(val.value))]
                             elif o.name == 'SUB':
-                                # TODO: Usub doesn't work yet
-                                mips_list = [mips.LoadI(mips.Reg('$t3'), r_m.value)]
+                                mips_list += [mips.LoadI(mips.Reg('$t3'), r_m.value)]
                                 mips_list += [mips.Op(mips.Sub(), mips.Reg(i.var.name), mips.Reg('$t3'), mips.Reg(r_m.target.name))]
                             elif o.name == 'Less':
-                                mips_list = [mips.OpI(mips.LessI(), mips.Reg(i.var.name), getRegFromPrim(l_m), mips.Imm(val.value))]
+                                mips_list += [mips.OpI(mips.LessI(), mips.Reg(i.var.name), getRegFromPrim(l_m), mips.Imm(val.value))]
                         case _:
                             mips_list = []
                     return mips_list
                 
                 # right exp is Label
-                case mips.Label(_):
+                case mips.Label(_) :
                     lo = getOpFromName(o.name)
                     match l_m:
                         # left exp is Constant
                         case mips.LoadI(_,val3):
                             if o.name == 'ADD':
-                                mips_list = [mips.OpI(mips.AddI(), mips.Reg(i.var.name), getRegFromPrim(l_m), mips.Imm(val3.value))]
+                                mips_list += [mips.OpI(mips.AddI(), mips.Reg(i.var.name), getRegFromPrim(l_m), mips.Imm(val3.value))]
                             elif o.name == 'SUB':
-                                # TODO: doesnt work right
-                                mips_list = [mips.OpI(mips.AddI(), mips.Reg(i.var.name), getRegFromPrim(l_m), mips.Imm(-val3.value))]
+                                mips_list += [mips.LoadI(mips.Reg('$t3'), val3)]
+                                mips_list += [mips.Op(mips.Sub(), mips.Reg(i.var.name), mips.Reg('$t3'), mips.Reg(r_m.label))]
                             elif o.name == 'Less':
-                                mips_list = [mips.OpI(mips.LessI(), mips.Reg(i.var.name), getRegFromPrim(l_m), mips.Imm(val3.value))]
-                        # right exp is Label
+                                mips_list += [mips.OpI(mips.LessI(), mips.Reg(i.var.name), getRegFromPrim(l_m), mips.Imm(val3.value))]
+                        # left exp is Label
                         case mips.Label():
-                            mips_list = [mips.Op(lo,mips.Reg(i.var.name), getRegFromPrim(l_m), getRegFromPrim(r_m))]
+                            if o.name == 'SUB':
+                                mips_list += [mips.Op(mips.Sub(), mips.Reg(i.var.name), mips.Reg(l_m.label), mips.Reg(r_m.label))]
+                            mips_list += [mips.Op(lo,mips.Reg(i.var.name), getRegFromPrim(l_m), getRegFromPrim(r_m))]
                         case _:
-                            mips_list = []
+                            pass
                     return mips_list
                 case _:
                     pass   
