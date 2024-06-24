@@ -3,18 +3,6 @@ import assembly.tac_ast as tac
 import common.log as log
 from common.prioQueue import PrioQueue
 
-def addCurrentToForbidden(xi: tac.ident, curCol: int, forb: dict[tac.ident, set[int]], edges: dict[tac.ident,tac.ident])->dict[tac.ident, set[int]]:
-    # k: y, v: x
-    for (k, v) in edges.items():
-        # x: x, v: x
-        if xi == v:
-            # add color of x to forb[y] 
-            if k in forb.keys():
-                forb[k].add(curCol)
-            else:
-                forb[k] = set([curCol])
-    return forb
-
 
 def chooseColor(x: tac.ident, forbidden: dict[tac.ident, set[int]]) -> int:
     """
@@ -49,12 +37,12 @@ def colorInterfGraph(g: InterfGraph, secondaryOrder: dict[tac.ident, int]={},
     colors: dict[tac.ident, int] = {}
     forbidden: dict[tac.ident, set[int]] = {}
     q = PrioQueue(secondaryOrder)
-    for (elem, i) in secondaryOrder.items():
-        q.push(elem,i)
 
     # 1. set W to to the set of all vertices of g
     W: list[tac.ident] = list(g.vertices)
-    # 2. Pick u from W with the largest set forbidden(u) (break ties randomly).
+    for v in g.vertices:
+        q.push(v)
+    # # 2. Pick u from W with the largest set forbidden(u) (break ties randomly).
     for idx_v in range(len(W)):
         v = W[idx_v]
         if v in dict(g.edges).keys():
@@ -63,9 +51,6 @@ def colorInterfGraph(g: InterfGraph, secondaryOrder: dict[tac.ident, int]={},
                 forbidden[edgs].add(idx_v)
             else:
                 forbidden[edgs] = set([idx_v])
-
-    # sort variables descending by forbidden length
-    forbidden = dict(sorted(forbidden.items(), key=lambda item: len(item[1]), reverse=True))
 
     # choose colors for vertices
     while not q.isEmpty():
@@ -76,8 +61,11 @@ def colorInterfGraph(g: InterfGraph, secondaryOrder: dict[tac.ident, int]={},
             continue
         else:
             colors[vert] = chosenColor
-            forbidden = addCurrentToForbidden(vert, colors[vert],forbidden,dict(g.edges))
-      
+            for vs in g.succs(vert):
+                if vs in forbidden.keys():
+                    forbidden[vs].add(chosenColor)
+                else:
+                    forbidden[vs] = set([chosenColor])
     m = RegisterAllocMap(colors, maxRegs)
     log.debug(f"m: {m}")  
     return m
