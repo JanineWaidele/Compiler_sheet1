@@ -51,7 +51,12 @@ def expToWasm(expr: exp) -> list[WasmInstr]:
         case Call(n,args,t):
             p = '$'+n.name
             f = ''
-            match tyOfExp(t):
+            t_check = t
+            if len(args) > 0:
+                t_check = args[0].ty
+
+            match tyOfExp(t_check):
+                
                 case Int():
                     f = 'i64'
                 case Bool():
@@ -138,6 +143,7 @@ def boolToInt32(b: bool)->int:
         return 1     
 
 def tyOfExp(e: Optional[resultTy]) -> ty: 
+
     match e:
         case NotVoid():
             return e.ty
