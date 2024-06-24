@@ -10,18 +10,13 @@ def chooseColor(x: tac.ident, forbidden: dict[tac.ident, set[int]]) -> int:
     """
     # 3. Find the lowest color c not in {COL[v]|v∈adj(u)}.
     # TODO: 
-    if x in forbidden.keys():
-        forb_x = forbidden[x]
-        if len(forb_x) >= MAX_REGISTERS:
-            raise IndexError("Not enough registers")
-        
-        for ic in range(MAX_REGISTERS):
-            if ic not in forb_x:
-                return ic
-            
-        raise IndexError("Not enough registers")
-    
-    return 0
+    col = 0
+    forb_x = forbidden.get(x,set())
+    while True:
+        if col not in forb_x:
+            return col
+        else:
+            col+=1
 
 def colorInterfGraph(g: InterfGraph, secondaryOrder: dict[tac.ident, int]={},
                      maxRegs: int=MAX_REGISTERS) -> RegisterMap:
@@ -56,16 +51,12 @@ def colorInterfGraph(g: InterfGraph, secondaryOrder: dict[tac.ident, int]={},
     while not q.isEmpty():
         vert = q.pop()
         chosenColor = chooseColor(vert,forbidden)
-        # check that max number of registers available isn't exceeded
-        if chosenColor >= maxRegs:
-            continue
-        else:
-            colors[vert] = chosenColor
-            for vs in g.succs(vert):
-                if vs in forbidden.keys():
-                    forbidden[vs].add(chosenColor)
-                else:
-                    forbidden[vs] = set([chosenColor])
+        colors[vert] = chosenColor
+        for vs in g.succs(vert):
+            if vs in forbidden.keys():
+                forbidden[vs].add(chosenColor)
+            else:
+                forbidden[vs] = set([chosenColor])
     m = RegisterAllocMap(colors, maxRegs)
     log.debug(f"m: {m}")  
     return m
