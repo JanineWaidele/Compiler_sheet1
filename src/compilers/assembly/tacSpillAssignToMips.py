@@ -31,7 +31,7 @@ def assignToMips(i: tacSpill.Assign) -> list[mips.instr]:
         case tacSpill.Prim(pr):
             match pr:
                 case tacSpill.Const(ci):
-                    mips_list = [mips.LoadI(mips.Reg('$t0'),mips.Imm(ci))]
+                    mips_list = [mips.LoadI(mips.Reg(i.var.name),mips.Imm(ci))]
                     return mips_list
                 case tacSpill.Name(_):
                     mips_list = [mips.LoadI(mips.Reg('$v0'),mips.Imm(5))]
@@ -41,10 +41,10 @@ def assignToMips(i: tacSpill.Assign) -> list[mips.instr]:
             r_m: mips.instr = primToMips(tacSpill.Prim(r))
             l_m: mips.instr = primToMips(tacSpill.Prim(l))
             match l_m:
-                # right exp is Constant
+                # left exp is Constant
                 case mips.LoadI(_,val):
                     match r_m:
-                        # left exp is Constant
+                        # right exp is Constant
                         case mips.LoadI(_,val2):
                             #done
                             if o.name in ['LESS','ADD']:
@@ -78,7 +78,11 @@ def assignToMips(i: tacSpill.Assign) -> list[mips.instr]:
                         case mips.LoadI(_,val3):
 
                             if o.name in ['ADD','LESS']:
-                                mips_list += [mips.OpI(getIOpFromName(o.name), mips.Reg(i.var.name), getRegFromPrim(l_m), mips.Imm(val3.value))]
+                                # current: reg of left, imm of right
+                                # testing: left val in t3 -> OPI, ADDI --> addr error#
+                                # testing: right val in t3 -> OP, ADD --> changed nothing
+                                #mips_list = [mips.LoadI(mips.Reg('$t3'),r_m.value)]#getRegFromPrim(l_m)
+                                mips_list += [mips.OpI(getIOpFromName(o.name), mips.Reg(i.var.name), mips.Reg(l_m.label), mips.Imm(val3.value))]
                                 #print(mips_list)
                             else:
                                 #done
@@ -89,7 +93,6 @@ def assignToMips(i: tacSpill.Assign) -> list[mips.instr]:
                         case mips.Label(labstr2):
                             # done?
                             mips_list += [mips.Op(lo, mips.Reg(i.var.name), mips.Reg(labstr), mips.Reg(labstr2))]
-
                         case _:
                             pass
                     return mips_list
