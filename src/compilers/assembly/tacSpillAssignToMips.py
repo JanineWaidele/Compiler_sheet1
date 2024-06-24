@@ -48,7 +48,8 @@ def assignToMips(i: tacSpill.Assign) -> list[mips.instr]:
                         case mips.LoadI(_,val2):
                             print('const, const')
                             if o.name == 'ADD':
-                                mips_list += [primToMips(tacSpill.Prim(tacSpill.Const(val.value+val2.value)))]
+                                mips_list += [mips.LoadI(mips.Reg('$t3'),val)]
+                                mips_list += [mips.OpI(mips.AddI(),mips.Reg(i.var.name), mips.Reg('$t3'), val2)]
                             elif o.name == 'SUB':
                                 mips_list += [primToMips(tacSpill.Prim(tacSpill.Const(val.value-val2.value)))]
                             elif o.name == 'MUL':
