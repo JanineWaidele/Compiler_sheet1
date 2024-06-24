@@ -21,12 +21,11 @@ def getRegFromPrim(mi: mips.instr)->mips.Reg:
         case mips.LoadI(t,_):
             return t
         case _:
-            #print('error t0')
             return mips.Reg('$t0')
 
 
 def assignToMips(i: tacSpill.Assign) -> list[mips.instr]:
-
+    #print(i)
     mips_list: list[mips.instr] = []
     match i.left:
         case tacSpill.Prim(pr):
@@ -42,12 +41,12 @@ def assignToMips(i: tacSpill.Assign) -> list[mips.instr]:
                     return mips_list
 
         case tacSpill.BinOp(l,o,r):
-            r_m: mips.instr = primToMips(tacSpill.Prim(l))
-            l_m: mips.instr = primToMips(tacSpill.Prim(r))
-            match r_m:
+            r_m: mips.instr = primToMips(tacSpill.Prim(r))
+            l_m: mips.instr = primToMips(tacSpill.Prim(l))
+            match l_m:
                 # right exp is Constant
                 case mips.LoadI(_,val):
-                    match l_m:
+                    match r_m:
                         # left exp is Constant
                         case mips.LoadI(_,val2):
                             if o.name == 'ADD':
@@ -56,12 +55,13 @@ def assignToMips(i: tacSpill.Assign) -> list[mips.instr]:
                                 mips_list += [primToMips(tacSpill.Prim(tacSpill.Const(val.value-val2.value)))]
                             elif o.name == 'MUL':
                                 mips_list += [primToMips(tacSpill.Prim(tacSpill.Const(val.value*val2.value)))]
+                        # left exp is Label
                         case mips.Label(_):
                             if o.name in ['ADD','LESS']:
                                 mips_list += [mips.OpI(getIOpFromName(o.name), mips.Reg(i.var.name), getRegFromPrim(l_m), mips.Imm(val.value))]
                             else:
-                                mips_list += [mips.LoadI(mips.Reg('$t3'), r_m.value)]
-                                mips_list += [mips.Op(getOpFromName(o.name), mips.Reg(i.var.name), mips.Reg('$t3'), mips.Reg(r_m.target.name))]
+                                mips_list += [mips.LoadI(mips.Reg('$t3'), l_m.value)]
+                                mips_list += [mips.Op(getOpFromName(o.name), mips.Reg(i.var.name), mips.Reg('$t3'), mips.Reg(r_m.label))]
                         case _:
                             pass
                     return mips_list
@@ -69,14 +69,14 @@ def assignToMips(i: tacSpill.Assign) -> list[mips.instr]:
                 # right exp is Label
                 case mips.Label(_) :
                     lo = getOpFromName(o.name)
-                    match l_m:
+                    match r_m:
                         # left exp is Constant
                         case mips.LoadI(_,val3):
                             if o.name in ['ADD','LESS']:
                                 mips_list += [mips.OpI(getIOpFromName(o.name), mips.Reg(i.var.name), getRegFromPrim(l_m), mips.Imm(val3.value))]
                             else:
                                 mips_list += [mips.LoadI(mips.Reg('$t3'), val3)]
-                                mips_list += [mips.Op(getOpFromName(o.name), mips.Reg(i.var.name), mips.Reg('$t3'), mips.Reg(r_m.label))]
+                                mips_list += [mips.Op(lo, mips.Reg(i.var.name), mips.Reg(l_m.label), mips.Reg('$t3'))]
                         # left exp is Label
                         case mips.Label():
                             mips_list += [mips.Op(lo, mips.Reg(i.var.name), mips.Reg(l_m.label), mips.Reg(r_m.label))]
