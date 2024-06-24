@@ -2,7 +2,6 @@ from assembly.common import *
 from assembly.graph import Graph
 import assembly.tac_ast as tac
 from assembly.tac_ast import *
-import common.log as log
 
 def instrDef(instr: tac.instr) -> set[tac.ident]:
     """
@@ -143,9 +142,6 @@ class InterfGraphBuilder:
         dSet = instrDef(instr)
         # vars live after k
         Lafterk = self.after[instrId]
-        log.debug(f"instr: {instr}")
-        log.debug(f"Lafterk: {Lafterk}")
-        log.debug(f"dSet: {dSet}")
         # (x elem defSet)
         for x in dSet:
             # (y elem Lafterk)
