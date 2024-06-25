@@ -72,7 +72,7 @@ def tyOfResultTy(ty: optional[resultTy]) -> ty:
             return Int()
         case _:
             return Int()
-
+        
 # turning an expression into a list of Wasm instructions
 def expToWasm(expr: exp) -> list[WasmInstr]:
 
@@ -162,27 +162,33 @@ def expToWasm(expr: exp) -> list[WasmInstr]:
                 tyTomatch = tyOfExp(args[0].ty)
             else:
                 tyTomatch = tyOfExp(ct)
+
             match tyTomatch:
-                case Array():
+                case Array(_):
                     # TODO
-                    pass
+                    pass#f = mapTyToWasmValType(eTy)
+                case Fun(_,resT):
+                    f = mapTyToWasmValType(tyOfExp(resT))
                 case Int():
                     f_in = 'i64'
                     f = 'i64'
                 case Bool():
                     f_in = 'i32'
                     f = 'bool'
-                case Fun():
-                    pass
-            match n.var.name:
-                case 'print':
-                    p = '$print_'+f
-                case 'input_int':
-                    p = '$input_'+f_in 
-                case _:
-                    pass
-
-            return utils.flatten([expToWasm(e) for e in args])+[WasmInstrCall(WasmId(p))]
+            match n:
+                case CallTargetBuiltin(vi):
+                    match vi.name:
+                        case 'print':
+                            p = '$print_'+f
+                        case 'input_int':
+                            p = '$input_'+f_in 
+                        case _:
+                            pass
+                    return utils.flatten([expToWasm(e) for e in args])+[WasmInstrCall(WasmId(p))]
+                case CallTargetDirect(ctd_id):
+                    return utils.flatten([expToWasm(e) for e in args])+[WasmInstrCall(WasmId('$'+ctd_id.name))]
+                case CallTargetIndirect(cit_v,_,_):
+                    return utils.flatten([expToWasm(e) for e in args])+[WasmInstrCall(WasmId('$'+cit_v.name))]
         
         # unariy operation (negate a const)
         case UnOp(op,arg):
@@ -382,7 +388,6 @@ def compileModule(m: plainAst.mod, cfg: CompilerConfig) -> WasmModule:
     maxArraySize = cfg.maxArraySize
     # Type check the module
     loc_vars = fun_tychecker.tycheckModule(m).toplevelLocals
-    funs =  [WasmId('$'+f[0].name) for f in fun_tychecker.tycheckModule(m).funLocals.items()] + [WasmId('$main')]
     # Generate the Wasm module
     wasm_imports = wasmImports(cfg.maxMemSize)
     wasm_exports = [WasmExport('main', WasmExportFunc(WasmId('$main')))]
@@ -397,7 +402,7 @@ def compileModule(m: plainAst.mod, cfg: CompilerConfig) -> WasmModule:
     compiled_stmts = compileStmts(trans_stmts)
     funcs = [WasmFunc(WasmId('$main'), [], None, locals, compiled_stmts)]
     funcs += [WasmFunc(WasmId('$'+i.name), [], None, getFuncVarList(lv), []) for (i,lv) in fun_tychecker.tycheckModule(m).funLocals.items()]
-    return WasmModule(wasm_imports, wasm_exports, globals=globals, data=Errors.data(), funcTable=WasmFuncTable(funs), funcs=funcs) 
+    return WasmModule(wasm_imports, wasm_exports, globals=globals, data=Errors.data(), funcTable=WasmFuncTable([WasmId('$main')]), funcs=funcs) 
 
 def mapTyToWasmValType(t: ty)->WasmValtype:
     tt: ty = t

@@ -25,6 +25,9 @@ def transExpAtomic(e: exp, ctx: Ctx) -> tuple[atom.atomExp, Temporaries]:
     Translates e to an atomic expression. Essentially a shortcut for transExp(e, True, ctx).
     """
     (res, ts) = transExp(e, True, ctx)
+    print(type(res))
+    #iat: atom.atomExp = atom.IntConst(0,Int())
+    #print(type(atom.AtomExp(iat,NotVoid(Int()))))
     match res:
         case atom.AtomExp(a):
             return (a, ts)
@@ -91,18 +94,22 @@ def transExp(e: exp, needAtomic: bool, ctx: Ctx) -> tuple[atom.exp, Temporaries]
             return (atom.AtomExp(atom.IntConst(v, Int()), t), [])
         case BoolConst(v):
             return (atom.AtomExp(atom.BoolConst(v, Bool()), t), [])
-        case Call(fun, args, _):
-            print('PROBLEM IS IN CALL')
+        case Call(fun, args, ct):
+            #print(e)
+            tmp_t = restyOfResultTy(ct)
             # fun: IntConst | BoolConst | Name | Call | UnOp | BinOp | ArrayInitDyn | ArrayInitStatic | Subscript
             (atomArgs, tmps) = utils.unzip([transExp(a, False, ctx) for a in args])
             #  CallTargetBuiltin | CallTargetDirect | CallTargetIndirect
             match fun:
                 case Name(fn):
+                    #print('NAME')
                     if fn.name in ['print','input_int','len']:
-                        return atomic(needAtomic, atom.Call(atom.CallTargetBuiltin(fn), atomArgs, t), utils.flatten(tmps), ctx)
+                        print(atomic(needAtomic, atom.Call(atom.CallTargetBuiltin(fn), atomArgs, tmp_t), utils.flatten(tmps), ctx))
+                        return atomic(needAtomic, atom.Call(atom.CallTargetBuiltin(fn), atomArgs, tmp_t), utils.flatten(tmps), ctx)
                     else:
-                        return atomic(needAtomic, atom.Call(atom.CallTargetDirect(fn), atomArgs, t), utils.flatten(tmps), ctx)
+                        return atomic(needAtomic, atom.Call(atom.CallTargetDirect(fn), atomArgs, tmp_t), utils.flatten(tmps), ctx)
                 case _:
+                    print('unhandeled')
                     return transExp(fun, True, ctx)
                 
         case UnOp(op, sub):
@@ -127,6 +134,7 @@ def transExp(e: exp, needAtomic: bool, ctx: Ctx) -> tuple[atom.exp, Temporaries]
             (atomElem, tmps2) = transExpAtomic(elemInit, ctx)
             return atomic(needAtomic, atom.ArrayInitDyn(atomLen, atomElem, t), tmps1 + tmps2, ctx)
         case ArrayInitStatic(initExps):
+            print(needAtomic)
             (atomArgs, tmps) = utils.unzip([transExpAtomic(i, ctx) for i in initExps])
             return atomic(needAtomic, atom.ArrayInitStatic(atomArgs, t), utils.flatten(tmps), ctx)
         case Subscript(arrExp, indexExp):
