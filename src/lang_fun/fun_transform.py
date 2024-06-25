@@ -31,6 +31,9 @@ def transExpAtomic(e: exp, ctx: Ctx) -> tuple[atom.atomExp, Temporaries]:
     match res:
         case atom.AtomExp(a):
             return (a, ts)
+        # case atom.ArrayInitStatic(ely, eli_ty):
+        #     for el in ely:
+
         case _:
             utils.abort(f'transExp with needAtom=True failed to return an atomic expression: {e}')
 
@@ -95,7 +98,8 @@ def transExp(e: exp, needAtomic: bool, ctx: Ctx) -> tuple[atom.exp, Temporaries]
         case BoolConst(v):
             return (atom.AtomExp(atom.BoolConst(v, Bool()), t), [])
         case Call(fun, args, ct):
-            #print(e)
+            print('in call')
+            print(e)
             tmp_t = restyOfResultTy(ct)
             # fun: IntConst | BoolConst | Name | Call | UnOp | BinOp | ArrayInitDyn | ArrayInitStatic | Subscript
             (atomArgs, tmps) = utils.unzip([transExp(a, False, ctx) for a in args])
@@ -134,10 +138,42 @@ def transExp(e: exp, needAtomic: bool, ctx: Ctx) -> tuple[atom.exp, Temporaries]
             (atomElem, tmps2) = transExpAtomic(elemInit, ctx)
             return atomic(needAtomic, atom.ArrayInitDyn(atomLen, atomElem, t), tmps1 + tmps2, ctx)
         case ArrayInitStatic(initExps):
-            print(needAtomic)
-            (atomArgs, tmps) = utils.unzip([transExpAtomic(i, ctx) for i in initExps])
+            exp_list: List[exp] = []
+            for i in initExps:
+                match i:
+                    case IntConst() | BoolConst() | Name():
+                        exp_list += [i]
+                    case ArrayInitStatic(aste,_):
+                        for a in aste:
+                            exp_list += [a]
+                    case _:
+                        #print('in pass')
+                        pass
+            (atomArgs, tmps) = utils.unzip([transExpAtomic(i, ctx) for i in exp_list])
             return atomic(needAtomic, atom.ArrayInitStatic(atomArgs, t), utils.flatten(tmps), ctx)
+        
         case Subscript(arrExp, indexExp):
+            exp_list: List[exp] = []
+            print(type(arrExp))
+            match arrExp:
+                case IntConst() | BoolConst() | Name():
+                    exp_list += [arrExp]
+                case ArrayInitStatic(aste,_):
+                    for a in aste:
+                        exp_list += [a]
+                case ArrayInitDyn(le,ei,_):
+                    exp_list += [le]
+                    exp_list += [ei]
+                case Subscript(ar,ide):
+                    print('in sub')
+                    (atomArr, tmps1) = transExpAtomic(ar, ctx)
+                    (atomIndex, tmps2) = transExpAtomic(ide, ctx)
+                    print(f"atom_arr: {atomArr}")
+                    print(f"atom_idx: {atomIndex}")
+                    return atomic(needAtomic, atom.Subscript(atomArr, atomIndex, t), tmps1 + tmps2, ctx)
+                case _:
+                    print('in pass')
+                    pass
             (atomArr, tmps1) = transExpAtomic(arrExp, ctx)
             (atomIndex, tmps2) = transExpAtomic(indexExp, ctx)
             return atomic(needAtomic, atom.Subscript(atomArr, atomIndex, t), tmps1 + tmps2, ctx)
