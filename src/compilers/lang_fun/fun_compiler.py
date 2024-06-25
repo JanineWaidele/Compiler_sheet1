@@ -10,6 +10,7 @@ import common.utils as utils
 
 # turning a single statement into a list of Wasm instructions
 def stmtToWasm(s: stmt) -> list[WasmInstr]:
+    #print(s)
     match s:
 
         case SubscriptAssign(l, i, r):
@@ -85,8 +86,10 @@ def expToWasm(expr: exp) -> list[WasmInstr]:
                     return [WasmInstrConst('i64', val)]
                 case BoolConst(val, _):
                     return [WasmInstrConst('i32', boolToInt32(val))]
-                case VarName(var, _) | FunName(var, _):
+                case VarName(var, _):
                     return [WasmInstrVarLocal('get', WasmId('$'+var.name))]
+                case FunName(var, _):
+                    return [WasmInstrCall(WasmId('$'+var.name))]
 
         case ArrayInitDyn(l_init, elemInit, ty):
             # TODO
@@ -151,6 +154,7 @@ def expToWasm(expr: exp) -> list[WasmInstr]:
 
         # call function with expressions
         case Call(n,args,ct):
+            print(n.var.name)
             # len
             if n.var.name == 'len':
                 return expToWasm(args[0]) + arrayLenInstrs() + [WasmInstrConvOp('i64.extend_i32_u')]
@@ -183,9 +187,11 @@ def expToWasm(expr: exp) -> list[WasmInstr]:
                         case 'input_int':
                             p = '$input_'+f_in 
                         case _:
-                            pass
+                            p = '$'+vi.name
                     return utils.flatten([expToWasm(e) for e in args])+[WasmInstrCall(WasmId(p))]
                 case CallTargetDirect(ctd_id):
+                    #print(args)
+                    print(utils.flatten([expToWasm(e) for e in args])+[WasmInstrCall(WasmId('$'+ctd_id.name))])
                     return utils.flatten([expToWasm(e) for e in args])+[WasmInstrCall(WasmId('$'+ctd_id.name))]
                 case CallTargetIndirect(cit_v,_,_):
                     return utils.flatten([expToWasm(e) for e in args])+[WasmInstrCall(WasmId('$'+cit_v.name))]
