@@ -24,7 +24,9 @@ def transExpAtomic(e: exp, ctx: Ctx) -> tuple[atom.atomExp, Temporaries]:
     """
     Translates e to an atomic expression. Essentially a shortcut for transExp(e, True, ctx).
     """
+    print(e)
     (res, ts) = transExp(e, True, ctx)
+    print(res)
     match res:
         case atom.AtomExp(a):
             return (a, ts)
