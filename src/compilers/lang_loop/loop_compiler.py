@@ -60,7 +60,7 @@ def expToWasm(expr: exp) -> list[WasmInstr]:
                 case Int():
                     f = 'i64'
                 case Bool():
-                    f = 'i32'
+                    f = 'bool'
             match n.name:
                 case 'print':
                     p = '$print_'+f

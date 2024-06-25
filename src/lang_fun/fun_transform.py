@@ -92,6 +92,8 @@ def transExp(e: exp, needAtomic: bool, ctx: Ctx) -> tuple[atom.exp, Temporaries]
         case BoolConst(v):
             return (atom.AtomExp(atom.BoolConst(v, Bool()), t), [])
         case Call(fun, args, _):
+            print('PROBLEM IS IN CALL')
+            # fun: IntConst | BoolConst | Name | Call | UnOp | BinOp | ArrayInitDyn | ArrayInitStatic | Subscript
             (atomArgs, tmps) = utils.unzip([transExp(a, False, ctx) for a in args])
             #  CallTargetBuiltin | CallTargetDirect | CallTargetIndirect
             match fun:
@@ -100,16 +102,9 @@ def transExp(e: exp, needAtomic: bool, ctx: Ctx) -> tuple[atom.exp, Temporaries]
                         return atomic(needAtomic, atom.Call(atom.CallTargetBuiltin(fn), atomArgs, t), utils.flatten(tmps), ctx)
                     else:
                         return atomic(needAtomic, atom.Call(atom.CallTargetDirect(fn), atomArgs, t), utils.flatten(tmps), ctx)
-                case Call(cfn,cargs,ct):
-                    match cfn:
-                        case Name(ncfn):
-                            tyl = [tyOfResultTy(e.ty) for e in cargs]
-                            return atomic(needAtomic, atom.Call(atom.CallTargetIndirect(ncfn,tyl,restyOfResultTy(ct)), atomArgs, t), utils.flatten(tmps), ctx)
-                        case _:
-                            raise RuntimeError('wronh call type')
                 case _:
-                    raise RuntimeError('wronh call type')
-            #return atomic(needAtomic, atom.Call(fun, atomArgs, t), utils.flatten(tmps), ctx)
+                    return transExp(fun, True, ctx)
+                
         case UnOp(op, sub):
             (atomSub, tmps) = transExp(sub, False, ctx)
             return atomic(needAtomic, atom.UnOp(op, atomSub, t), tmps, ctx)
@@ -126,7 +121,7 @@ def transExp(e: exp, needAtomic: bool, ctx: Ctx) -> tuple[atom.exp, Temporaries]
                 case UserFun() | BuiltinFun():
                     return (atom.AtomExp(atom.FunName(x, xt), t), [])
                 case _:
-                    raise RuntimeError('wronh call type')
+                    raise RuntimeError('wrong call type')
         case ArrayInitDyn(lenExp, elemInit):
             (atomLen, tmps1) = transExpAtomic(lenExp, ctx)
             (atomElem, tmps2) = transExpAtomic(elemInit, ctx)
