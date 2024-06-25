@@ -373,11 +373,16 @@ def arrayOffsetInstrs(arrayExp: atomExp, indexExp: atomExp, subTy: ty) -> list[W
 
     return offs
 
+def getFuncVarList(llv: list[fun_tychecker.LocalVar])->list[tuple[WasmId, WasmValtype]]:
+    # LocalVar: name, ty
+    return [(WasmId('$'+il.name.name),mapTyToWasmValType(il.ty)) for il in llv]
+
 def compileModule(m: plainAst.mod, cfg: CompilerConfig) -> WasmModule:
     global maxArraySize
     maxArraySize = cfg.maxArraySize
     # Type check the module
-    loc_vars = fun_tychecker.tycheckModule(m).toplevelLocals + fun_tychecker.tycheckModule(m).toplevelLocals
+    loc_vars = fun_tychecker.tycheckModule(m).toplevelLocals
+    funs =  [WasmId('$'+f[0].name) for f in fun_tychecker.tycheckModule(m).funLocals.items()] + [WasmId('$main')]
     # Generate the Wasm module
     wasm_imports = wasmImports(cfg.maxMemSize)
     wasm_exports = [WasmExport('main', WasmExportFunc(WasmId('$main')))]
@@ -391,7 +396,8 @@ def compileModule(m: plainAst.mod, cfg: CompilerConfig) -> WasmModule:
     
     compiled_stmts = compileStmts(trans_stmts)
     funcs = [WasmFunc(WasmId('$main'), [], None, locals, compiled_stmts)]
-    return WasmModule(wasm_imports, wasm_exports, globals=globals, data=Errors.data(), funcTable=WasmFuncTable([WasmId('$main')]), funcs=funcs) 
+    funcs += [WasmFunc(WasmId('$'+i.name), [], None, getFuncVarList(lv), []) for (i,lv) in fun_tychecker.tycheckModule(m).funLocals.items()]
+    return WasmModule(wasm_imports, wasm_exports, globals=globals, data=Errors.data(), funcTable=WasmFuncTable(funs), funcs=funcs) 
 
 def mapTyToWasmValType(t: ty)->WasmValtype:
     tt: ty = t
