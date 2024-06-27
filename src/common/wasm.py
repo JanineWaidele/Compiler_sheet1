@@ -293,12 +293,17 @@ class WasmInstrComment:
 class WasmInstrTrap:
     def render(self) -> SExp:
         return SExpId('unreachable')
+    
+@dataclass(frozen=True)
+class WasmInstrReturn:
+    def render(self) -> SExp:
+        return SExpId('return')
 
 
 type WasmInstr = WasmInstrConst | WasmInstrNumBinOp | WasmInstrIntRelOp | WasmInstrConvOp \
                | WasmInstrCall | WasmInstrCallIndirect | WasmInstrVarLocal | WasmInstrVarGlobal \
                | WasmInstrBranch | WasmInstrIf | WasmInstrLoop | WasmInstrBlock | WasmInstrMem \
-               | WasmInstrComment | WasmInstrTrap | WasmInstrDrop
+               | WasmInstrComment | WasmInstrTrap | WasmInstrDrop | WasmInstrReturn
 
 # instructions used for loop and for compiling to assembly
 type WasmInstrL = WasmInstrConst | WasmInstrNumBinOp | WasmInstrIntRelOp \
