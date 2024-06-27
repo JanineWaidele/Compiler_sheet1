@@ -134,16 +134,23 @@ def expToWasm(exp: exp | atomExp) -> list[WasmInstr]:
                         case Bool():
                             return expToWasm(l)+expToWasm(right)+[WasmInstrIntRelOp('i32', 'ne')]
                         
-        case ArrayInitDyn(arrLen, elemInit):
-            # TODO
-            arrayInstr = compileInitArray(arrLen, tyOfExp(elemInit))
-            initInstr = arrayInitDynInstrs(elemInit, atomGetArrayTy(elemInit))
-            return arrayInstr + initInstr
+        case ArrayInitDyn(lenArr, elemInit):
+
+            match elemInit:
+                case IntConst():
+                    ty = Int()
+                case BoolConst():
+                    ty = Bool()
+                case VarName(_,t) | FunName(_,t):
+                    ty = t
+
+            arrinstrs = compileInitArray(lenArr, tyOfExp(elemInit))
+            initinstrs = arrayInitDynInstrs(elemInit, ty)
+            return arrinstrs + initinstrs
         case ArrayInitStatic(elemInit):
-            # TODO
-            arrayInstr = compileInitArray(IntConst(len(elemInit), Int()), tyOfExp(elemInit[0]))
-            initInstr = arrayInitInstrs(elemInit)
-            return arrayInstr + initInstr
+            arrinstrs = compileInitArray(IntConst(len(elemInit), Int()), tyOfExp(elemInit[0]))
+            initinstrs = arrayInitInstrs(elemInit)
+            return arrinstrs + initinstrs
         case Subscript(array, index, ty):
             # done
             if isinstance(ty, tychecker.NotVoid):
@@ -187,56 +194,28 @@ def arrayInitDynInstrs(elemInit: atomExp, t: ty) -> list[WasmInstr]:
     Expects the address of the array on top of the stack.
     Keeps the address of the array on top of the stack.
     """
-    saveArrayStart: list[WasmInstr] = [
-        WasmInstrVarLocal("set", WasmId("$@tmp_array_start"))
-    ]
-    getArrayStart: list[WasmInstr] = [
-        WasmInstrVarLocal("get", WasmId("$@tmp_array_start"))
-    ]
-    addHeaderOffset: list[WasmInstr] = [
-        WasmInstrConst("i32", 4),
-        WasmInstrNumBinOp("i32", "add"),
-    ]
+    res = [WasmInstrVarLocal("set", WasmId("$@tmp_array_start"))]
+    res += [ WasmInstrVarLocal("get", WasmId("$@tmp_array_start"))]
+    res += [ WasmInstrVarLocal("get", WasmId("$@tmp_array_start"))]
+    res += [WasmInstrConst("i32", 4),WasmInstrNumBinOp("i32", "add")]
+    res += [WasmInstrVarLocal("set", WasmId("$@tmp_array_start"))]
 
-    # create new elements until end of array
-    endCond: list[WasmInstr] = getArrayStart + [
-        WasmInstrVarGlobal("get", FREE_PTR_ID),
-        WasmInstrIntRelOp("i32", "ne"),
-    ]
+
+    endcrit: List[WasmInstr] = [WasmInstrVarLocal("get", WasmId("$@tmp_array_start"))]
+    endcrit += [WasmInstrVarGlobal("get", FREE_PTR_ID),WasmInstrIntRelOp("i32", "ne")]
+
     s = 8 if elemInit.ty == Int() else 4
 
-    move_array_start = getArrayStart + [
-        WasmInstrConst("i32", s),
-        WasmInstrNumBinOp("i32", "add"),
-        WasmInstrVarLocal("set", WasmId("$@tmp_array_start")),
-    ]
+    mov: List[WasmInstr] = [WasmInstrVarLocal("get", WasmId("$@tmp_array_start"))]
+    mov += [WasmInstrConst("i32", s),WasmInstrNumBinOp("i32", "add"),WasmInstrVarLocal("set", WasmId("$@tmp_array_start"))]
 
-    putNewElement: list[WasmInstr] = (
-        getArrayStart
-        + expToWasm(elemInit)
-        + [WasmInstrMem(mapTyToWasmValType(t), "store")]
-    )
+    newElem: List[WasmInstr] = [WasmInstrVarLocal("get", WasmId("$@tmp_array_start"))]
+    newElem += expToWasm(elemInit)
+    newElem += [WasmInstrMem(mapTyToWasmValType(t), "store")]
+    
+    allInstrs: List[WasmInstr] = [WasmInstrLoop(WasmId("$while_loop"),newElem+mov+endcrit+[WasmInstrBranch(WasmId("$while_loop"), True)])]
 
-    loop_name = WasmId("$while_loop")
-    fillArray = [
-        WasmInstrLoop(
-            loop_name,
-            putNewElement
-            + move_array_start
-            + endCond
-            + [WasmInstrBranch(loop_name, True)],
-        )
-    ]
-
-    return (
-        (  # first time add header to array start
-            saveArrayStart
-            + getArrayStart
-            + getArrayStart
-            + addHeaderOffset
-            + saveArrayStart
-        )
-    ) + fillArray
+    return res + allInstrs
 
 def lengthCheck(lenExp: atomExp, bytelength: int) -> list[WasmInstr]:
 
@@ -306,25 +285,6 @@ def compileInitArray(lenExp: atomExp, elemTy: ty) -> list[WasmInstr]:
     return res
 
 
-def arrayReserveMemoryInstrs(lenInstr: list[WasmInstr], t: ty) -> list[WasmInstr]:
-    s = 8 if t == Int() else 4
-
-    return (
-        [WasmInstrVarGlobal("get", FREE_PTR_ID)]
-        + lenInstr
-        + [
-            WasmInstrConvOp("i32.wrap_i64"),
-            WasmInstrConst("i32", s),
-            WasmInstrNumBinOp("i32", "mul"),
-            WasmInstrConst("i32", 4),
-            WasmInstrNumBinOp("i32", "add"),
-            WasmInstrVarGlobal("get", FREE_PTR_ID),
-            WasmInstrNumBinOp("i32", "add"),
-            WasmInstrVarGlobal("set", FREE_PTR_ID),
-        ]
-    )
-
-
 def checkBounds(lenInstr: list[WasmInstr], t: ty) ->List[WasmInstr]:
     # done
     """
@@ -384,19 +344,6 @@ def arrayLenInstrs() -> list[WasmInstr]:
     len_instrs += [WasmInstrNumBinOp('i32','shr_u')]
     return len_instrs
 
-
-def arrayHeaderInit(is_array_type: bool) -> list[WasmInstr]:
-    """
-    expects the array lenght on top of stack
-    puts the new array header on top of stack.
-    """
-    return [
-        WasmInstrConvOp("i32.wrap_i64"),
-        WasmInstrConst("i32", 4),
-        WasmInstrNumBinOp("i32", "shl"),
-        WasmInstrConst("i32", 3 if is_array_type else 1),
-        WasmInstrNumBinOp("i32", "xor"),
-    ]
 
 
 def arrayOffsetInstrs(arrayExp: atomExp, indexExp: atomExp, subTy: ty) -> list[WasmInstr]:
@@ -547,16 +494,6 @@ def mapTyToWasmValType(t: ty)->WasmValtype:
             return 'i64'
         case Bool():
             return 'i32'
-
-def atomGetArrayTy(elemInit: atomExp) -> ty:
-    match elemInit:
-        case IntConst(_):
-            ty = Int()
-        case BoolConst(_):
-            ty = Bool()
-        case VarName(ty=t) | FunName(ty=t):
-            ty = t
-    return ty
 
 
 def resultTyToWasmValTy(t: resultTy) -> WasmValtype | None:
