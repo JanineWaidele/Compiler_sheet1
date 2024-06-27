@@ -27,9 +27,12 @@ def expToWasm(exp: exp | atomExp) -> list[WasmInstr]:
         case VarName(name, ty):
             # done
             return [WasmInstrVarLocal("get", WasmId('$'+name.name))]
-        case FunName(name):
-            # TODO
-            return [getFnHack(name)]
+        case FunName(fn):
+            # done
+            if getFuncTabIdx(fn) == -1:
+                return [WasmInstrVarLocal("get", WasmId('$'+fn.name))]
+            return [WasmInstrConst("i32", getFuncTabIdx(fn))]
+
         case Call(fun, args, ct):
             # done
             argInstr = utils.flatten([expToWasm(x) for x in args])
@@ -40,15 +43,15 @@ def expToWasm(exp: exp | atomExp) -> list[WasmInstr]:
                     f = ''
                     f_in = ''
                     if len(args) > 0:
-                        tyTomatch = myTyOfExp(args[0].ty)
+                        tyTomatch = TyOfOptResTy(args[0].ty)
                     else:
-                        tyTomatch = myTyOfExp(ct)
+                        tyTomatch = TyOfOptResTy(ct)
 
                     match tyTomatch:
                         case Array(_):
                             pass
                         case Fun(_,resT):
-                            f = mapTyToWasmValType(myTyOfExp(resT))
+                            f = mapTyToWasmValType(TyOfOptResTy(resT))
                         case Int():
                             f_in = 'i64'
                             f = 'i64'
@@ -89,7 +92,7 @@ def expToWasm(exp: exp | atomExp) -> list[WasmInstr]:
                 case Is():
                     return expToWasm(l) +expToWasm(right) + [WasmInstrIntRelOp('i32','eq')]
                 case Add():
-                    match myTyOfExp(l.ty):
+                    match TyOfOptResTy(l.ty):
                         case Array() | Fun():
                             # TODO
                             return []
@@ -114,7 +117,7 @@ def expToWasm(exp: exp | atomExp) -> list[WasmInstr]:
                 case GreaterEq():
                     return expToWasm(l)+expToWasm(right)+[WasmInstrIntRelOp('i64', 'ge_s')]
                 case Eq():
-                    match myTyOfExp(l.ty):
+                    match TyOfOptResTy(l.ty):
                         case Array() | Fun():
                             return []
                         case Int():
@@ -122,7 +125,7 @@ def expToWasm(exp: exp | atomExp) -> list[WasmInstr]:
                         case Bool():
                             return expToWasm(l)+expToWasm(right)+[WasmInstrIntRelOp('i32', 'eq')]
                 case NotEq():
-                    match myTyOfExp(l.ty):
+                    match TyOfOptResTy(l.ty):
                         case Array() | Fun():
                             # TODO
                             return []
@@ -278,6 +281,7 @@ def arrayReserveMemoryInstrs(lenInstr: list[WasmInstr], t: ty) -> list[WasmInstr
 
 
 def checkBounds(lenInstr: list[WasmInstr], t: ty) ->List[WasmInstr]:
+    # done
     """
     lenInstr puts the length of the array on top of the stack.
     Crashes if the array is too small or too big.
@@ -304,30 +308,26 @@ def checkBounds(lenInstr: list[WasmInstr], t: ty) ->List[WasmInstr]:
     return instRes
 
 
-def arrayCheckBounds(
-    lenInstr: list[WasmInstr], indexInstr: list[WasmInstr]
-) -> list[WasmInstr]:
+def arrayCheckBoundsIdx(lenInstr: list[WasmInstr], indexInstr: list[WasmInstr]) -> list[WasmInstr]:
+    # done
     """
     lenInstr puts the length of the array on top of the stack.
     indexInstr puts the desired index
     crashes if index is out of bounds.
     """
-
-    def arrayBoundsCheck(is_less: bool) -> list[WasmInstr]:
-        return (
-            indexInstr
-            + ([WasmInstrConst("i64", 0)] if is_less else lenInstr)
-            + [
-                WasmInstrIntRelOp("i64", "lt_s" if is_less else "ge_s"),
-                WasmInstrIf(
-                    None,
-                    Errors.outputError("IndexError") + [WasmInstrTrap()],
-                    [],
-                ),
-            ]
-        )
-
-    return arrayBoundsCheck(False) + arrayBoundsCheck(True)
+    instRes: list[WasmInstr] = []
+    
+    instRes += indexInstr
+    instRes += [WasmInstrConst('i64',0)]
+    instRes += [WasmInstrIntRelOp('i64','lt_s')]
+    instRes += [WasmInstrIf(None, Errors.outputError("IndexError") + [WasmInstrTrap()], [])]
+    
+    instRes += indexInstr 
+    instRes += lenInstr
+    instRes += [WasmInstrIntRelOp('i64','ge_s')]
+    instRes += [WasmInstrIf(None, Errors.outputError("IndexError")+[WasmInstrTrap()], [])]
+    
+    return instRes
 
 
 def arrayLenInstrs() -> list[WasmInstr]:
@@ -365,7 +365,7 @@ def arrayOffsetInstrs(arrayExp: atomExp, indexExp: atomExp, t: ty) -> list[WasmI
     s = 8 if t == Int() else 4
 
     return (
-        arrayCheckBounds(
+        arrayCheckBoundsIdx(
             arrayLenInstr + [WasmInstrConvOp("i64.extend_i32_u")], indexInstrs
         )
     ) + (  # calculate offset
@@ -492,15 +492,7 @@ def compileModule(m: plainAst.mod, cfg: CompilerConfig) -> WasmModule:
         ],
     )
 
-def getFnHack(var: ident) -> WasmInstr:
-    """
-    Cant have the same name for a variable and a top-level function.
-    """
-    if getFuncIndex(var) == -1:
-        return WasmInstrVarLocal("get", WasmId('$'+var.name))
-    return WasmInstrConst("i32", getFuncIndex(var))
-
-def myTyOfExp(e: Optional[resultTy]) -> ty: 
+def TyOfOptResTy(e: Optional[resultTy]) -> ty: 
     match e:
         case NotVoid():
             return e.ty
@@ -511,8 +503,6 @@ def tyOfExp(e: exp | atomExp | plainAst.exp) -> ty:
     match e.ty:
         case NotVoid(t):
             return t
-        case Void():
-            raise Exception(f"Expression {e} has no type")
         case Int() | Bool() | Array() | Fun():
             return e.ty
         case _:
@@ -548,7 +538,7 @@ def resultTyToWasmValTy(t: resultTy) -> WasmValtype | None:
             return None
 
 
-def getFuncIndex(name: ident) -> int:
+def getFuncTabIdx(name: ident) -> int:
     global func_table
     for i, f in enumerate(func_table.elems):
         if f == WasmId('$%'+name.name):
