@@ -7,34 +7,32 @@ from lang_array.array_compilerSupport import *
 from common.compilerSupport import *
 import common.utils as utils
 
-FREE_PTR_ID = WasmId("$@free_ptr")
+maxArraySize = -1
 
-max_array_size = -1
-
-func_table: WasmFuncTable = WasmFuncTable([])
+funTab: WasmFuncTable = WasmFuncTable([])
 
 def expToWasm(exp: exp | atomExp) -> list[WasmInstr]:
     match exp:
         case AtomExp(e):
-            # done
+            
             return expToWasm(e)
         case IntConst(value):
-            # done
+            
             return [WasmInstrConst("i64", value)]
         case BoolConst(value):
-            # done
+            
             return [WasmInstrConst("i32", int(value))]
         case VarName(name, ty):
-            # done
+            
             return [WasmInstrVarLocal("get", WasmId('$'+name.name))]
         case FunName(fn):
-            # done
+            
             if getFuncTabIdx(fn) == -1:
                 return [WasmInstrVarLocal("get", WasmId('$'+fn.name))]
             return [WasmInstrConst("i32", getFuncTabIdx(fn))]
 
         case Call(fun, args, ct):
-            # done
+            
             argInstr = utils.flatten([expToWasm(x) for x in args])
             match fun:
                 case CallTargetBuiltin(vi):
@@ -75,11 +73,11 @@ def expToWasm(exp: exp | atomExp) -> list[WasmInstr]:
                     return argInstr + [WasmInstrCall(WasmId(p))]
                 case CallTargetDirect(name):
                     return argInstr + [WasmInstrCall(WasmId("$%"+name.name)),]
-                case CallTargetIndirect(n, params=params, result=ty):
+                case CallTargetIndirect(n, params, ty):
                     return argInstr + [WasmInstrVarLocal("get", WasmId('$'+n.name)),WasmInstrCallIndirect([mapTyToWasmValType(p) for p in params],resultTyToWasmValTy(ty))]
                 
         case UnOp(op, arg):
-            # done
+            
             match op:
                 case USub():
                     return [WasmInstrConst("i64", 0)] + expToWasm(arg) + [WasmInstrNumBinOp("i64", "sub")]
@@ -87,7 +85,7 @@ def expToWasm(exp: exp | atomExp) -> list[WasmInstr]:
                     return expToWasm(arg) + [WasmInstrConst("i32", 1), WasmInstrNumBinOp("i32", "xor")]
         # binary operations -> left and right expr on stack, than do mathematic op on them
         case BinOp(l,op,right):
-            # done
+            
             match op:
                 case Is():
                     return expToWasm(l) +expToWasm(right) + [WasmInstrIntRelOp('i32','eq')]
@@ -152,7 +150,7 @@ def expToWasm(exp: exp | atomExp) -> list[WasmInstr]:
             initinstrs = arrayInitInstrs(elemInit)
             return arrinstrs + initinstrs
         case Subscript(array, index, ty):
-            # done
+            
             if isinstance(ty, tychecker.NotVoid):
                 return arrayOffsetInstrs(array, index, ty.ty) + [WasmInstrMem(mapTyToWasmValType(ty.ty), "load")]
             else:
@@ -160,40 +158,22 @@ def expToWasm(exp: exp | atomExp) -> list[WasmInstr]:
 
 
 def arrayInitInstrs(elemInit: list[atomExp]) -> list[WasmInstr]:
-    """
-    Expects the address of the array on top of the stack.
-    Keeps the address of the array on top of the stack.
-    """
-    saveArrayStart = [WasmInstrVarLocal("set", WasmId("$@tmp_array_start"))]
-    getArrayStart = [WasmInstrVarLocal("get", WasmId("$@tmp_array_start"))]
-    addHeaderOffset = [WasmInstrConst("i32", 4), WasmInstrNumBinOp("i32", "add")]
+
     wast = mapTyToWasmValType(elemInit[0].ty)
     b = 4 if wast == 'i32' else 8
 
-    loadArray: list[WasmInstr] = []
+    res: list[WasmInstr] = []
+    res += [WasmInstrVarLocal("set", WasmId("$@tmp_array_start"))]
     for i, e in enumerate(elemInit):
-        loadArray += (
-            (getArrayStart + addHeaderOffset)
-            + (  # add element size offset
-                [
-                    WasmInstrConst("i32", b),
-                    WasmInstrConst("i32", i),
-                    WasmInstrNumBinOp("i32", "mul"),
-                    WasmInstrNumBinOp("i32", "add"),
-                ]
-            )
-            + expToWasm(e)
-            + [WasmInstrMem(wast, "store")]
-        )
-
-    return saveArrayStart + loadArray + getArrayStart
+        res += [WasmInstrVarLocal("get", WasmId("$@tmp_array_start")),WasmInstrConst("i32", 4), WasmInstrNumBinOp("i32", "add")]
+        res += [WasmInstrConst("i32", b),WasmInstrConst("i32", i),WasmInstrNumBinOp("i32", "mul")]
+        res += [WasmInstrNumBinOp("i32", "add")]+expToWasm(e)+[WasmInstrMem(wast, "store")]
+    res += [WasmInstrVarLocal("get", WasmId("$@tmp_array_start"))]
+    return res
 
 
 def arrayInitDynInstrs(elemInit: atomExp, t: ty) -> list[WasmInstr]:
-    """
-    Expects the address of the array on top of the stack.
-    Keeps the address of the array on top of the stack.
-    """
+
     res = [WasmInstrVarLocal("set", WasmId("$@tmp_array_start"))]
     res += [ WasmInstrVarLocal("get", WasmId("$@tmp_array_start"))]
     res += [ WasmInstrVarLocal("get", WasmId("$@tmp_array_start"))]
@@ -202,7 +182,7 @@ def arrayInitDynInstrs(elemInit: atomExp, t: ty) -> list[WasmInstr]:
 
 
     endcrit: List[WasmInstr] = [WasmInstrVarLocal("get", WasmId("$@tmp_array_start"))]
-    endcrit += [WasmInstrVarGlobal("get", FREE_PTR_ID),WasmInstrIntRelOp("i32", "ne")]
+    endcrit += [WasmInstrVarGlobal("get", WasmId("$@free_ptr")),WasmInstrIntRelOp("i32", "ne")]
 
     s = 8 if elemInit.ty == Int() else 4
 
@@ -228,7 +208,7 @@ def lengthCheck(lenExp: atomExp, bytelength: int) -> list[WasmInstr]:
     
     global maxArraySize
     lRes += expToWasm(AtomExp(lenExp, reTy))
-    lRes += [WasmInstrConst('i64', max_array_size//bytelength)]
+    lRes += [WasmInstrConst('i64', maxArraySize//bytelength)]
     lRes += [WasmInstrIntRelOp('i64','ge_u')]
     lRes += [WasmInstrIf(None, [WasmInstrConst('i32',0),WasmInstrConst('i32',14),WasmInstrCall(WasmId('$print_err')),WasmInstrTrap()], [])]
     
@@ -286,17 +266,13 @@ def compileInitArray(lenExp: atomExp, elemTy: ty) -> list[WasmInstr]:
 
 
 def checkBounds(lenInstr: list[WasmInstr], t: ty) ->List[WasmInstr]:
-    # done
-    """
-    lenInstr puts the length of the array on top of the stack.
-    Crashes if the array is too small or too big.
-    """
+    
     if t == Int():
         s = 8
     else:
         s = 4
-    global max_array_size
-    max_size = max_array_size // s
+    global maxArraySize
+    max_size = maxArraySize // s
 
     instRes: list[WasmInstr] = []
     
@@ -314,12 +290,7 @@ def checkBounds(lenInstr: list[WasmInstr], t: ty) ->List[WasmInstr]:
 
 
 def arrayCheckBoundsIdx(lenInstr: list[WasmInstr], indexInstr: list[WasmInstr]) -> list[WasmInstr]:
-    # done
-    """
-    lenInstr puts the length of the array on top of the stack.
-    indexInstr puts the desired index
-    crashes if index is out of bounds.
-    """
+    
     instRes: list[WasmInstr] = []
     
     instRes += indexInstr
@@ -338,7 +309,7 @@ def arrayCheckBoundsIdx(lenInstr: list[WasmInstr], indexInstr: list[WasmInstr]) 
 def arrayLenInstrs() -> list[WasmInstr]:
     '''Generates code that expects the array address on top of stack and puts the length on top
     of stack.'''
-    # done 
+     
     len_instrs: list[WasmInstr] = []
     len_instrs += [WasmInstrMem('i32', 'load'), WasmInstrConst('i32', 4)]
     len_instrs += [WasmInstrNumBinOp('i32','shr_u')]
@@ -347,7 +318,7 @@ def arrayLenInstrs() -> list[WasmInstr]:
 
 
 def arrayOffsetInstrs(arrayExp: atomExp, indexExp: atomExp, subTy: ty) -> list[WasmInstr]:
-    # done
+    
     '''Returns instructions that places the memory offset for a certain array element on top of
     stack.'''
     # Compute the base address of the array
@@ -405,12 +376,13 @@ def compileStmts(stmts: list[stmt]) -> list[WasmInstr]:
     return utils.flatten([stmtToWasm(x) for x in stmts])
 
 def compileModule(m: plainAst.mod, cfg: CompilerConfig) -> WasmModule:
+    # in this function help from Anton Kesy
     tyCheckRes = tychecker.tycheckModule(m)
     ctx = transform.Ctx()
     atomStmts = transform.transStmts(m.stmts, ctx)
 
-    global max_array_size
-    max_array_size = cfg.maxArraySize
+    global maxArraySize
+    maxArraySize = cfg.maxArraySize
 
     tll: list[tuple[WasmId, WasmValtype]] = [(WasmId('$'+t.name.name), mapTyToWasmValType(t.ty)) for t in tyCheckRes.toplevelLocals]
 
@@ -418,55 +390,23 @@ def compileModule(m: plainAst.mod, cfg: CompilerConfig) -> WasmModule:
         return [(WasmId('$'+n.name), mapTyToWasmValType(t)) for n, t in ctx.freshVars.items()]
 
     myLocs: list[tuple[WasmId, WasmValtype]] = [(WasmId("$@tmp_array_start"), "i32")]
-
     allLocs = myLocs + Locals.decls()
+    topFuns: List[WasmFunc] = []
+    for fn in m.funs:
+        pams = [(WasmId('$'+p.var.name), mapTyToWasmValType(p.ty)) for p in fn.params]
+        topFuns.append( WasmFunc(id=WasmId("$%"+fn.name.name),params=pams,result=(resultTyToWasmValTy(fn.result)),
+                instrs=compileStmts(transform.transStmts(fn.body, ctx))+[WasmInstrTrap()],
+                locals=allLocs+[(WasmId('$'+lvar.name.name),mapTyToWasmValType(lvar.ty),)for lvar in tyCheckRes.funLocals[fn.name]]+getAtomLocs(),
+            ))
 
-    top_level_funcs = [
-        (
-            WasmFunc(
-                id=WasmId("$%"+n.name.name),
-                params=[(WasmId('$'+p.var.name), mapTyToWasmValType(p.ty)) for p in n.params],
-                result=(resultTyToWasmValTy(n.result)),
-                instrs=compileStmts(
-                    transform.transStmts(n.body, ctx)
-                )  # reuse existing context
-                + [WasmInstrTrap()],  # workaround for type-warnings when using return
-                locals=allLocs
-                + [
-                    (
-                        WasmId('$'+lvar.name.name),
-                        mapTyToWasmValType(lvar.ty),
-                    )
-                    for lvar in tyCheckRes.funLocals[n.name]
-                ]
-                + getAtomLocs(),
-            )
-        )
-        for n in m.funs
-    ]
-
-    global func_table
-    func_table = WasmFuncTable(
+    global funTab
+    funTab = WasmFuncTable(
         [WasmId(f"$main")] + [WasmId("$%"+n.name.name) for n in m.funs]
     )
 
-    return WasmModule(
-        imports=wasmImports(cfg.maxMemSize),
-        exports=[WasmExport("main", WasmExportFunc(WasmId("$main")))],
-        globals=Globals.decls(),
-        data=Errors.data(),
-        funcTable=func_table,
-        funcs=top_level_funcs
-        + [
-            WasmFunc(
-                id=WasmId(f"$main"),
-                params=[],
-                result=None,
-                locals=tll + allLocs + getAtomLocs(),
-                instrs=compileStmts(atomStmts),
-            )
-        ],
-    )
+    return WasmModule(imports=wasmImports(cfg.maxMemSize),exports=[WasmExport("main", WasmExportFunc(WasmId("$main")))],
+        globals=Globals.decls(),data=Errors.data(),funcTable=funTab,funcs=topFuns+[
+            WasmFunc(id=WasmId(f"$main"),params=[],result=None,locals=tll + allLocs + getAtomLocs(),instrs=compileStmts(atomStmts))])
 
 def TyOfOptResTy(e: Optional[resultTy]) -> ty: 
     match e:
@@ -505,8 +445,8 @@ def resultTyToWasmValTy(t: resultTy) -> WasmValtype | None:
 
 
 def getFuncTabIdx(name: ident) -> int:
-    global func_table
-    for i, f in enumerate(func_table.elems):
+    global funTab
+    for i, f in enumerate(funTab.elems):
         if f == WasmId('$%'+name.name):
             return i
     return -1
